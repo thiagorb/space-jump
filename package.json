@@ -1,0 +1,22 @@
+{
+  "name": "robots.txt",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "serve": "webpack-dev-server",
+    "build": "./build.sh"
+  },
+  "author": "Thiago Romão Barcala",
+  "license": "ISC",
+  "dependencies": {
+    "babel-loader": "*",
+    "file-loader": "*",
+    "html-webpack-plugin": "*",
+    "surge": "^0.21.6",
+    "ts-loader": "*",
+    "typescript": "*",
+    "webpack": "^4.44.1",
+    "webpack-cli": "^3.3.12",
+    "webpack-dev-server": "^3.11.0"
+  }
+}
