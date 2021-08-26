@@ -4,6 +4,7 @@
             "es2015",
             "dom"
         ],
+        "moduleResolution": "Node",
         "target": "es2016"
     }
 }

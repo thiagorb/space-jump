@@ -1,6 +1,6 @@
 import { memoizedBackgroundPattern } from "./Background";
 import { start as gameStart } from "./Game";
-import { keyboard, menu, scene, WORLD_SIZE } from "./Globals";
+import { context, keyboard, keyboardMap, menu, scene, WORLD_SIZE } from "./Globals";
 
 const resize = () => {
     document.querySelectorAll('canvas').forEach(canvas => {
@@ -8,10 +8,7 @@ const resize = () => {
         canvas.height = canvas.clientHeight;
     });
 
-    scene.width = window.innerWidth;
-    scene.height = window.innerHeight;
-    scene.scale = Math.min(scene.width / WORLD_SIZE, scene.height / WORLD_SIZE);
-    console.log(scene, window.innerWidth, window.innerHeight);
+    scene.scale = Math.min(window.innerWidth / WORLD_SIZE, window.innerHeight / WORLD_SIZE);
 };
 window.addEventListener('resize', resize);
 
@@ -48,30 +45,114 @@ const initializeMonetization = () => {
 initializeMonetization();
 
 document.addEventListener('keydown', (e: KeyboardEvent) => {
-    const prop = e.key.replace(/^./, s => s.toLowerCase());
-    if (prop in keyboard) {
-        keyboard[prop] = true;
+    const key = keyboardMap.get(e.code);
+    if (key) {
+        keyboard[key] = true;
     }
 });
 
 document.addEventListener('keyup', (e: KeyboardEvent) => {
-    const prop = e.key.replace(/^./, s => s.toLowerCase());
-    if (prop in keyboard) {
-        keyboard[prop] = false;
+    const key = keyboardMap.get(e.code);
+    if (key) {
+        keyboard[key] = false;
     }
 });
+
+let menuActive = false;
+
+export const activateMenu = async () => {
+    const background = await memoizedBackgroundPattern().getBackground();
+
+    let backgroundY = background.getHeight() * Math.random();
+    let previousTime = null;
+    const renderBackground = (time: number) => {
+        background.draw(context, backgroundY);
+        if (previousTime) {
+            backgroundY += (time - previousTime) * 0.01;
+        }
+        previousTime = time;
+        if (menuActive) {
+            window.requestAnimationFrame(renderBackground);
+        }
+    };
+
+    menuActive = true;
+    menu.style.display = null;
+    window.requestAnimationFrame(renderBackground);
+};
+
+const deactivateMenu = () => {
+    menuActive = false;
+    menu.style.display = 'none';
+};
 
 document.addEventListener('DOMContentLoaded', () => {
-    document.body.focus();
+    const body: any = document.body;
+
     resize();
-});
 
-document.querySelector('#start').addEventListener('click', async () => {
-    const pattern = memoizedBackgroundPattern();
-    for (let i = 0; i < 1; i++) {
-        await pattern.increment();
+    const goToMenu = () => {
+        document.querySelector('#fullscreen').remove();
+        const pattern = memoizedBackgroundPattern();
+        for (let i = 0; i < 1; i++) {
+            pattern.increment();
+        }
+        activateMenu();
+
+        document.querySelector('#start').addEventListener('click', () => {
+            deactivateMenu();
+            gameStart();
+        });
+    };
+
+    document.querySelector('#fullscreen--yes').addEventListener('click', () => {
+        try {
+            if (body.webkitEnterFullScreen) {
+                body.webkitEnterFullScreen();
+            } else {
+                body.requestFullscreen();
+            }
+        } catch (error) {
+            console.error(error);
+        }
+        goToMenu();
+    });
+
+    document.querySelector('#fullscreen--no').addEventListener('click', () => {
+        goToMenu();
+    });
+
+    if (document.fullscreenEnabled) {
+        document.querySelector<HTMLDivElement>('#fullscreen').classList.remove('hidden');
+    } else {
+        goToMenu();
     }
-
-    menu.style.display = 'none';
-    gameStart();
 });
+
+if (isTouchDevice()) {
+    document.body.classList.add('touch');
+
+    const setActive = callback => event => {
+        (event.target as HTMLDivElement).classList.add('is-active');
+        callback(event);
+    };
+
+    const unsetActive = callback => event => {
+        (event.target as HTMLDivElement).classList.remove('is-active');
+        callback(event);
+    };
+
+    const filterTouch = callback => event => {
+        const key = (event.target as HTMLDivElement).getAttribute('data-touch-key');
+        if (key in keyboard) {
+            event.preventDefault();
+            callback(key);
+        }
+    };
+
+    const flagKey = key => keyboard[key] = true;
+    const unflagKey = key => keyboard[key] = false;
+
+    document.addEventListener('touchstart', setActive(filterTouch(flagKey)));
+    document.addEventListener('touchend', unsetActive(filterTouch(unflagKey)));
+}

@@ -1,5 +1,5 @@
 {
-  "name": "robots.txt",
+  "name": "space",
   "version": "1.0.0",
   "description": "",
   "scripts": {
@@ -9,14 +9,14 @@
   "author": "Thiago Romão Barcala",
   "license": "ISC",
   "dependencies": {
+    "@webpack-cli/serve": "^1.5.2",
     "babel-loader": "*",
     "file-loader": "*",
     "html-webpack-plugin": "*",
     "surge": "^0.21.6",
     "ts-loader": "*",
     "typescript": "*",
-    "webpack": "^4.44.1",
-    "webpack-cli": "^3.3.12",
-    "webpack-dev-server": "^3.11.0"
+    "webpack-dev-server": "^4.0.0",
+    "zzfx": "^1.1.8"
   }
 }

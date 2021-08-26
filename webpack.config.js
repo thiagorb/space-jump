@@ -8,9 +8,8 @@ module.exports = {
         filename: 'main.js'
     },
     devServer: {
-        hot: false,
-        inline: false,
-        liveReload: false
+        hot: true,
+        liveReload: true
     },
     plugins: [
         new HtmlWebpackPlugin({

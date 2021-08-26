@@ -10,13 +10,21 @@ export const URL_RADIUS = WORLD_SIZE / 50;
 export const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas');
 export const menu = document.querySelector<HTMLDivElement>('#menu');
 export const scene = {
-    width: 1000,
-    height: 1000,
     scale: 1
 };
 export const context = canvas.getContext('2d');
+
 export const keyboard = {
     arrowUp: false,
     arrowLeft: false,
     arrowRight: false,
 };
+
+export const keyboardMap: Map<string, keyof typeof keyboard> = new Map([
+    ['ArrowUp', 'arrowUp'],
+    ['ArrowLeft', 'arrowLeft'],
+    ['ArrowRight', 'arrowRight'],
+    ['KeyW', 'arrowUp'],
+    ['KeyA', 'arrowLeft'],
+    ['KeyD', 'arrowRight'],
+]);

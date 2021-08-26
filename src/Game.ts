@@ -1,6 +1,9 @@
+import { playRocket } from "./Audio";
 import { memoizedBackgroundPattern } from "./Background";
 import { WORLD_SIZE, GRAVITY, TERMINAL_VELOCITY, STEPS_PER_MILISECOND, SPEED_UNIT, STEPS_PER_SECOND, URL_RADIUS, scene as scene, canvas, context, keyboard, JUMP_SPEED, ACCELERATION_UNIT, menu } from "./Globals";
 import { between, sign } from "./Helpers";
+import { LocalStorage } from "./LocalStorage";
+import { activateMenu } from "./Main";
 import { Vector2D } from "./Vectorial";
 
 abstract class GameObject {
@@ -36,7 +39,7 @@ abstract class GameObject {
 class ScreenArea extends GameObject {
     width: number = 1000;
     height: number = 1000;
-    speed: number = -200 * SPEED_UNIT;
+    speed: number = -50 * SPEED_UNIT;
     speedBoost: number = 0;
 }
 
@@ -44,6 +47,8 @@ class RoundShape {
     width: number;
     begin: Vector2D;
     end: Vector2D;
+    light = '#fff';
+    shadow = '#999';
 
     constructor(x1: number, y1: number, x2: number, y2: number, width: number) {
         this.width = width;
@@ -52,19 +57,46 @@ class RoundShape {
     }
 }
 
+const drawRoundShapeLight = (roundShape: RoundShape) => {
+    context.save();
+
+    context.strokeStyle = roundShape.light;
+    const log = Math.log(roundShape.width * 4.4) / 1.8;
+    context.translate(-0.07 * log, -0.07 * log);
+    context.lineWidth = log;
+    context.beginPath();
+    context.moveTo(roundShape.begin.x, roundShape.begin.y);
+    context.lineTo(roundShape.end.x, roundShape.end.y);
+    context.stroke();
+
+    context.restore();
+};
+
+const drawRoundShape = (roundShape: RoundShape) => {
+    context.strokeStyle = roundShape.shadow;
+    context.lineWidth = roundShape.width;
+    context.beginPath();
+    context.moveTo(roundShape.begin.x, roundShape.begin.y);
+    context.lineTo(roundShape.end.x, roundShape.end.y);
+    context.stroke();
+};
+
 export class Player extends GameObject {
     speed: Vector2D = new Vector2D();
     width: number = 70;
     height: number = 150;
     direction: number = 1;
+    rocket: boolean = false;
+
+    rocketParticles = new Set<any>();
 
     legGap = 0.25;
     armGap = 0.5;
 
-    body = new RoundShape(0, 0.1, 0, 0.1, 1.0);
+    body = new RoundShape(0, 0.1, 0, 0.101, 1.0);
     leftLeg = new RoundShape(-this.legGap * 0.9, 0.3, -this.legGap, 0.8, 0.4);
     rightLeg = new RoundShape(this.legGap * 0.9, 0.3, this.legGap, 0.8, 0.4);
-    head = new RoundShape(0, -0.5, 0, -0.5, 1.0);
+    head = new RoundShape(0, -0.5, 0, -0.501, 1.0);
     leftArm = new RoundShape(-this.armGap * 0.8, -0.1, -this.armGap, 0.3, 0.4);
     rightArm = new RoundShape(this.armGap * 0.8, -0.1, this.armGap, 0.3, 0.4);
 
@@ -101,30 +133,6 @@ export class Player extends GameObject {
     animation: any = this.restAnimation;
     currentFrame = 0;
 
-    drawRoundShapeLight(roundShape: RoundShape) {
-        context.save();
-
-        context.strokeStyle = '#fff';
-        const log = Math.log(roundShape.width * 4.4) / 1.8;
-        context.translate(-0.07 * log, -0.07 * log);
-        context.lineWidth = log;
-        context.beginPath();
-        context.moveTo(roundShape.begin.x, roundShape.begin.y);
-        context.lineTo(roundShape.end.x, roundShape.end.y);
-        context.stroke();
-
-        context.restore();
-    }
-
-    drawRoundShape(roundShape: RoundShape) {
-        context.strokeStyle = '#999';
-        context.lineWidth = roundShape.width;
-        context.beginPath();
-        context.moveTo(roundShape.begin.x, roundShape.begin.y);
-        context.lineTo(roundShape.end.x, roundShape.end.y);
-        context.stroke();
-    }
-
     updateAnimation() {
         if (this.currentFrame >= this.animation.length) {
             this.currentFrame = 0;
@@ -154,6 +162,45 @@ export class Player extends GameObject {
     render() {
         context.save();
 
+        if (this.rocket) {
+            for (let i = 0; i < 30; i++) {
+                this.rocketParticles.add({
+                    speed: {
+                        x: (0.5 - Math.random()) * 3,
+                        y: 10,
+                    },
+                    x: this.position.x + this.width / 2,
+                    y: i + this.position.y + this.height / 2,
+                    time: 0,
+                });
+            }
+
+            if (this.speed.y >= 0) {
+                this.rocket = false;
+            }
+        }
+
+        const particleLifeTime = 20;
+        for (const particle of this.rocketParticles) {
+            const progress =particle.time / particleLifeTime;
+            context.lineWidth = 40 * (1 - Math.abs(0.3 - progress));
+            context.lineCap = 'round';
+            const yellow = 255 * Math.min(1, 1 - 2 * progress);
+            const decay = Math.max(0, Math.min(1, 1 - progress));
+            context.strokeStyle = `rgba(${255 * decay}, ${yellow * decay}, 0, ${0.1 * decay})`;
+            context.beginPath();
+            context.moveTo(particle.x, particle.y);
+            context.lineTo(particle.x, particle.y + 0.1);
+            context.stroke();
+
+            particle.time++;
+            particle.x += particle.speed.x;
+            particle.y += particle.speed.y;
+            if (progress >= 1) {
+                this.rocketParticles.delete(particle);
+            }
+        }
+
         this.updateAnimation();
         this.leftLeg.end.x = this.leftLeg.begin.x + 0.5 * Math.cos(this.animationState.legsRotation);
         this.leftLeg.end.y = this.leftLeg.begin.y - 0.5 * Math.sin(this.animationState.legsRotation);
@@ -170,29 +217,29 @@ export class Player extends GameObject {
 
         context.lineCap = 'round';
 
-        this.drawRoundShape(this.leftArm);
-        this.drawRoundShape(this.rightArm);
-        this.drawRoundShapeLight(this.rightArm);
-        this.drawRoundShapeLight(this.leftArm);
-        this.drawRoundShape(this.leftLeg);
-        this.drawRoundShape(this.rightLeg);
-        this.drawRoundShapeLight(this.leftLeg);
-        this.drawRoundShapeLight(this.rightLeg);
+        drawRoundShape(this.leftArm);
+        drawRoundShape(this.rightArm);
+        drawRoundShapeLight(this.rightArm);
+        drawRoundShapeLight(this.leftArm);
+        drawRoundShape(this.leftLeg);
+        drawRoundShape(this.rightLeg);
+        drawRoundShapeLight(this.leftLeg);
+        drawRoundShapeLight(this.rightLeg);
 
-        this.drawRoundShape(this.head);
-        this.drawRoundShape(this.body);
+        drawRoundShape(this.head);
+        drawRoundShape(this.body);
 
-        this.drawRoundShapeLight(this.head);
-        this.drawRoundShapeLight(this.body);
+        drawRoundShapeLight(this.head);
+        drawRoundShapeLight(this.body);
 
         if (this.direction === 1) {
-            this.drawRoundShapeLight(this.leftLeg);
-            this.drawRoundShape(this.leftArm);
-            this.drawRoundShapeLight(this.leftArm);
+            drawRoundShapeLight(this.leftLeg);
+            drawRoundShape(this.leftArm);
+            drawRoundShapeLight(this.leftArm);
         } else {
-            this.drawRoundShapeLight(this.rightLeg);
-            this.drawRoundShape(this.rightArm);
-            this.drawRoundShapeLight(this.rightArm);
+            drawRoundShapeLight(this.rightLeg);
+            drawRoundShape(this.rightArm);
+            drawRoundShapeLight(this.rightArm);
         }
 
         context.fillStyle = 'black';
@@ -203,7 +250,7 @@ export class Player extends GameObject {
         context.fillText('😄', 0.12 * this.direction, -0.45);
         context.fillStyle = 'rgba(0, 0, 0, 0.8)';
         this.drawGlass();
-        */
+        //*/
 
         context.strokeStyle = 'white';
         context.lineWidth = 0.05;
@@ -279,62 +326,57 @@ export class Player extends GameObject {
     }
 }
 
-(async () => {
-    // await new Promise(resolve => setTimeout(resolve, 200));
-    // const background = await createBackground();
-    /*
-    setInterval(() => {
-        context.drawImage(b1, 0, canvas.height / 2 - b1.height);
-        context.drawImage(b1, 0, canvas.height / 2);
-    }, 500);
-    */
-
-    /*
-    const player = new Player();
-    player.animation = player.runAnimation;
-
-    setInterval(() => {
-        // player.legsRotation = -Math.PI / 2 + Math.cos(rotation) * 0.5;
-        context.save();
-        context.translate(canvas.width / 2, canvas.height * 0.1);
-        context.scale(3, 3);
-        context.fillStyle = 'red';
-        context.fillRect(player.left - 50, player.top - 20, player.width + 100, player.height + 40);
-        context.fillStyle = 'blue';
-        context.fillRect(player.left, player.top, player.width, player.height);
-        player.render();
-        context.restore();
-    }, 20);
-    */
-})();
-
-document.querySelector('#back').addEventListener('click', async () => {
-    const c = document.createElement('div');
-    c.style.position = 'absolute';
-    c.style.left = '0';
-    c.style.top = '0';
-    c.style.width = '100vw';
-    c.style.height = '100vh';
-    c.style.overflow = 'auto';
-    c.addEventListener('click', () => c.remove());
-    document.body.appendChild(c);
-    c.appendChild(await (memoizedBackgroundPattern().getPatternImage()));
-});
-
-
 abstract class InteractiveObject extends GameObject {
     abstract render(): void;
     tick(state: GameState) { }
     preTick(state: GameState) { }
 }
 
-class Spring extends InteractiveObject {
+class Rocket extends InteractiveObject {
     width: number = 20;
     height: number = 20;
 
+    leftTube: RoundShape;
+    rightTube: RoundShape;
+
+    constructor() {
+        super();
+        this.leftTube = new RoundShape(-0.1, -0.4, -0.1, 0.0, 0.5);
+        this.rightTube = new RoundShape(0.1, -0.4, 0.1, 0.0, 0.5);
+        this.leftTube.light = this.rightTube.light = '#ddd';
+        this.leftTube.shadow = this.rightTube.shadow = '#999';
+    }
+
     render() {
-        context.fillStyle = 'yellow';
-        context.fillRect(this.position.x, this.position.y, this.width, this.height);
+        context.save();
+        context.translate(this.position.x + this.width / 2, this.position.y + this.width / 2);
+        context.scale(60, 60);
+
+
+        context.fillStyle = '#bbb';
+        context.beginPath();
+        context.moveTo(0, -1);
+        context.bezierCurveTo(0.3, -0.8, 0.3, -0.4, 0.15, -0.1);
+        context.lineTo(-0.15, -0.1)
+        context.bezierCurveTo(-0.3, -0.4, -0.3, -0.8, 0, -1);
+        context.closePath();
+        context.fill();
+
+        context.fillStyle = '#69f';
+        context.beginPath();
+        context.moveTo(0.25, -0.5);
+        context.bezierCurveTo(0.45, -0.35, 0.4, 0, 0.4, 0);
+        context.bezierCurveTo(0.3, -0.2, 0.20, -0.2, 0.20, -0.2);
+        context.closePath();
+        context.fill();
+        context.beginPath();
+        context.moveTo(-0.25, -0.5);
+        context.bezierCurveTo(-0.45, -0.35, -0.4, 0, -0.4, 0);
+        context.bezierCurveTo(-0.3, -0.2, -0.20, -0.2, -0.20, -0.2);
+        context.closePath();
+        context.fill();
+
+        context.restore();
     }
 
     tick(state: GameState) {
@@ -343,7 +385,9 @@ class Spring extends InteractiveObject {
         }
 
         if (this.boundBoxCollision(state.player)) {
+            playRocket();
             state.player.speed.y = -1.5 * JUMP_SPEED;
+            state.player.rocket = true;
             state.screenArea.speedBoost = -1.2 * JUMP_SPEED - state.screenArea.speed;
         }
     }
@@ -369,8 +413,57 @@ abstract class Platform extends InteractiveObject {
 
 class StaticPlatform extends Platform {
     render() {
-        context.fillStyle = 'blue';
-        context.fillRect(this.position.x, this.position.y, this.width, this.height);
+
+        context.save();
+        context.translate(this.position.x, this.position.y);
+
+        // Start bottom and middle
+        context.save();
+        context.translate(this.width / 2, this.height / 2 + 20);
+        context.scale(this.width / 2, this.height / 2);
+        context.beginPath();
+        context.rect(-1, -3, 2, 2);
+        context.ellipse(0, -1, 1, 1, 0, 0, Math.PI * 2);
+        context.clip();
+
+        const linear = context.createLinearGradient(-1, 0, 1, 0);
+        linear.addColorStop(0.1, '#bbb');
+        linear.addColorStop(0.2, '#fff');
+        linear.addColorStop(0.3, '#bbb');
+        linear.addColorStop(1, '#555');
+        context.fillStyle = linear;
+        context.fillRect(-1, -3, 2, 10);
+
+        const linearRot = context.createLinearGradient(-1, 0, 0, 0.2);
+        linearRot.addColorStop(0.1, `rgba(255, 255, 255, 0.0)`);
+        linearRot.addColorStop(0.2, `rgba(255, 255, 255, 0.3)`);
+        linearRot.addColorStop(0.3, `rgba(255, 255, 255, 0.0)`);
+        linearRot.addColorStop(0.5, `rgba(255, 255, 255, 0.0)`);
+        linearRot.addColorStop(0.6, `rgba(255, 255, 255, 0.3)`);
+        linearRot.addColorStop(0.9, `rgba(255, 255, 255, 0.0)`);
+        context.fillStyle = linearRot;
+        context.fillRect(-1, -2, 2, 10);
+
+        context.restore();
+        // End bottom and middle
+
+        // Start top
+        context.save();
+        context.translate(this.width / 2, this.height / 2 - 10);
+        context.scale(this.width / 2, this.height / 2);
+        const radial2 = context.createRadialGradient(0, -1, 0, 0, 0, 1);
+        radial2.addColorStop(0.5, `rgba(120, 120, 120, 1.0)`);
+        radial2.addColorStop(1, `rgba(160, 160, 160, 1.0)`);
+        context.fillStyle = radial2;
+
+        context.beginPath();
+        context.ellipse(0, 0, 1, 1, 0, 0, Math.PI * 2);
+        context.closePath();
+        context.fill();
+        context.restore();
+        // End top
+
+        context.restore();
     }
 }
 
@@ -379,8 +472,66 @@ class TemporaryPlatform extends Platform {
     disappearing: boolean = false;
 
     render() {
-        context.fillStyle = `rgba(0, 255, 0, ${this.time / TemporaryPlatform.maxTime})`;
-        context.fillRect(this.position.x, this.position.y, this.width, this.height);
+        context.save();
+        context.translate(this.position.x, this.position.y);
+        context.globalAlpha = this.time / TemporaryPlatform.maxTime;
+
+        // Start bottom and middle
+        context.save();
+        context.translate(this.width / 2, this.height / 2 + 20);
+        context.scale(this.width / 2, this.height / 2);
+        const radial = context.createRadialGradient(0, 0, 0, 0, 0, 1);
+        radial.addColorStop(0.5, `rgba(255, 255, 255, 0.0)`);
+        radial.addColorStop(1, `rgba(255, 255, 255, 0.2)`);
+        context.fillStyle = radial;
+
+        context.beginPath();
+        context.ellipse(0, 0, 1, 1, 0, 0, Math.PI * 2);
+        context.fill();
+
+        context.beginPath();
+        context.rect(-1, -3, 2, 3);
+        context.ellipse(0, 0, 1, 1, 0, 0, Math.PI * 2);
+        context.clip();
+
+        const linear = context.createLinearGradient(-1, 0, 1, 0);
+        linear.addColorStop(0, `rgba(255, 255, 255, 0.2)`);
+        linear.addColorStop(0.2, `rgba(255, 255, 255, 0.0)`);
+        linear.addColorStop(0.7, `rgba(255, 255, 255, 0.0)`);
+        linear.addColorStop(1, `rgba(255, 255, 255, 0.5)`);
+        context.fillStyle = linear;
+        context.fillRect(-1, -3, 2, 10);
+
+        const linearRot = context.createLinearGradient(-1, 0, 0, 0.2);
+        linearRot.addColorStop(0.1, `rgba(255, 255, 255, 0.0)`);
+        linearRot.addColorStop(0.2, `rgba(255, 255, 255, 0.3)`);
+        linearRot.addColorStop(0.3, `rgba(255, 255, 255, 0.0)`);
+        linearRot.addColorStop(0.5, `rgba(255, 255, 255, 0.0)`);
+        linearRot.addColorStop(0.6, `rgba(255, 255, 255, 0.3)`);
+        linearRot.addColorStop(0.9, `rgba(255, 255, 255, 0.0)`);
+        context.fillStyle = linearRot;
+        context.fillRect(-1, -3, 2, 10);
+
+        context.restore();
+        // End bottom and middle
+
+        // Start top
+        context.save();
+        context.translate(this.width / 2, this.height / 2 - 10);
+        context.scale(this.width / 2, this.height / 2);
+        const radial2 = context.createRadialGradient(0, 0, 0, 0, 0, 1);
+        radial2.addColorStop(0.5, `rgba(255, 255, 255, 0.0)`);
+        radial2.addColorStop(1, `rgba(255, 255, 255, 0.7)`);
+        context.fillStyle = radial2;
+
+        context.beginPath();
+        context.ellipse(0, 0, 1, 1, 0, 0, Math.PI * 2);
+        context.fill();
+        context.restore();
+        // End top
+
+        context.restore();
+
     }
 
     tick(state: GameState) {
@@ -406,10 +557,66 @@ class TemporaryPlatform extends Platform {
 
 class MovingPlatform extends Platform {
     direction: number = 1;
+    lightRotation: number = 0;
+    lights = [
+        {color: {red: 255, green: 0, blue: 0}, direction: 0},
+        {color: {red: 255, green: 255, blue: 0}, direction: 2 * Math.PI / 3},
+        {color: {red: 0, green: 0, blue: 255}, direction: 4 * Math.PI / 3},
+    ];
+
+    renderLight({red, green, blue}, direction: number) {
+        context.save();
+        context.translate(
+            this.width / 2 + (this.width * Math.cos(direction)) / 2,
+            this.height / 2 - 5 + (this.height * Math.sin(direction)) / 2,
+        );
+        context.scale(20, 20);
+        const light = context.createRadialGradient(0, 0, 0, 0, 0, 1);
+        light.addColorStop(0, `rgba(${red}, ${green}, ${blue}, 0.9)`);
+        light.addColorStop(0.1, `rgba(${red}, ${green}, ${blue}, 0.7)`);
+        light.addColorStop(0.2, `rgba(${red}, ${green}, ${blue}, 0.2)`);
+        light.addColorStop(1, `rgba(${red}, ${green}, ${blue}, 0)`);
+        context.fillStyle = light;
+        context.beginPath();
+        context.arc(0, 0, 1, 0, Math.PI * 2);
+        context.fill();
+        context.restore();
+    }
 
     render() {
-        context.fillStyle = 'blue';
-        context.fillRect(this.position.x, this.position.y, this.width, this.height);
+        context.save();
+        context.translate(this.position.x, this.position.y);
+
+        for (const light of this.lights) {
+            if ((light.direction + this.lightRotation) % (Math.PI * 2) >= Math.PI) {
+                this.renderLight(light.color, light.direction + this.lightRotation);
+            }
+        }
+
+        context.fillStyle = '#aaa';
+        context.beginPath();
+        context.ellipse(this.width / 2, this.height / 2 + 10, this.width / 2, this.height / 2, 0, 0, Math.PI * 2);
+        context.fill();
+
+        context.fillStyle = 'black';
+        context.beginPath();
+        context.ellipse(this.width / 2, this.height / 2, this.width / 2, this.height / 2, 0, 0, Math.PI * 2);
+        context.fill();
+
+        context.fillStyle = '#aaa';
+        context.beginPath();
+        context.ellipse(this.width / 2, this.height / 2 - 10, this.width / 2, this.height / 2, 0, 0, Math.PI * 2);
+        context.fill();
+
+        for (const light of this.lights) {
+            if ((light.direction + this.lightRotation) % (Math.PI * 2) < Math.PI) {
+                this.renderLight(light.color, light.direction + this.lightRotation);
+            }
+        }
+
+        this.lightRotation += 0.1;
+
+        context.restore();
     }
 
     tick(state: GameState) {
@@ -420,7 +627,7 @@ class MovingPlatform extends Platform {
             state.player.position.x += MovingPlatform.horizontalSpeed * this.direction;
         }
 
-        if (this.left <= 0 || this.right >= WORLD_SIZE) {
+        if ((this.left <= 0 && this.direction < 0) || (this.right >= WORLD_SIZE && this.direction > 0)) {
             this.direction *= -1;
         }
     }
@@ -431,27 +638,28 @@ class MovingPlatform extends Platform {
     }
 }
 
-interface GameState {
-    paused: boolean;
-    over: boolean;
-    previousTime: number;
-    player: Player;
-    objects: Set<InteractiveObject>;
-    screenArea: ScreenArea;
-    nextPlatformTop: number;
-    previousPlatformX: number;
-    backgroundY: number;
-    onPlatform: Platform | null;
+class GameState {
+    paused: boolean = false;
+    over: boolean = false;
+    previousTime: number = 0;
+    player: Player = new Player();
+    objects: Set<InteractiveObject> = new Set();
+    screenArea: ScreenArea = new ScreenArea();
+    nextPlatformTop: number = 0;
+    previousPlatformX: number = 0;
+    backgroundY: number = 0;
+    onPlatform: Platform | null = null;
+    highScore: number = LocalStorage.get().highScore;
+
+    get score() {
+        return -Math.round(this.screenArea.top / 100);
+    }
 }
 
 interface MovableObject {
     position: Vector2D;
     speed: Vector2D
 }
-
-const speed = (objectState: MovableObject) => {
-    objectState.position.add(objectState.speed);
-};
 
 /*
 let sps: number = 0;
@@ -462,17 +670,42 @@ let fpsCounter: number = 0;
 
 const render = (state: GameState) => {
     context.save();
-    context.translate(scene.width / 2, 0);
-    context.scale(scene.scale, scene.scale);
-    context.translate(-WORLD_SIZE / 2, 0);
-    context.translate(-state.screenArea.left, -state.screenArea.top);
+    context.translate(0, window.innerHeight / 2);
+    context.scale(1, scene.scale);
+    context.translate(0, -WORLD_SIZE / 2);
 
+    context.beginPath();
+    context.rect(0, 0, window.innerWidth, WORLD_SIZE);
+    context.closePath();
+    context.clip();
+
+    context.translate(window.innerWidth / 2, 0);
+    context.scale(scene.scale, 1);
+    context.translate(-WORLD_SIZE / 2, 0);
+
+    context.translate(-state.screenArea.left, -state.screenArea.top);
 
     // render objects
     for (const object of state.objects) {
         object.render();
     }
     state.player.render();
+
+    context.restore();
+
+    context.save();
+    context.scale(scene.scale, scene.scale);
+    const highScore = `HI-SCORE ${state.highScore.toString().padStart(6, '0')}`;
+    const score = `SCORE    ${state.score.toString().padStart(6, '0')}`;
+    context.textBaseline = 'top';
+    context.font = '1000 40px monospace'
+    context.lineWidth = 5;
+    context.strokeStyle = '#333';
+    context.strokeText(highScore, 20, 20);
+    context.strokeText(score, 20, 60);
+    context.fillStyle = '#fff';
+    context.fillText(highScore, 20, 20);
+    context.fillText(score, 20, 60);
 
     context.restore();
 
@@ -493,7 +726,7 @@ export const start = async () => {
 };
 
 export const createGame = async () => {
-    const background = await (memoizedBackgroundPattern().createBackground());
+    const background = await (memoizedBackgroundPattern().getBackground());
 
     const tick = () => {
         // check if player is on platform
@@ -519,20 +752,16 @@ export const createGame = async () => {
             state.previousPlatformX = platform.position.x;
             state.nextPlatformTop = state.nextPlatformTop - 100 - Math.random() * 100 * STEPS_PER_MILISECOND;
 
+            // if (type > 0.0) {
             if (type > 0.9) {
-                const spring = new Spring();
-                spring.position.x = platform.left + (platform.width - spring.width) * Math.random();
-                spring.position.y = platform.top - spring.height;
-                state.objects.add(spring);
+                const jetpack = new Rocket();
+                jetpack.position.x = platform.left + (platform.width - jetpack.width) * Math.random();
+                jetpack.position.y = platform.top - jetpack.height;
+                state.objects.add(jetpack);
             }
         }
 
         state.player.tick(state);
-
-        if (state.player.position.y > state.screenArea.bottom + WORLD_SIZE / 2) {
-            state.over = true;
-            menu.style.display = null;
-        }
 
         for (const object of state.objects) {
             object.tick(state);
@@ -541,27 +770,22 @@ export const createGame = async () => {
         if (state.screenArea.speedBoost < 0) {
             state.screenArea.speedBoost += GRAVITY;
         }
+
+        if (state.screenArea.top > state.player.top) {
+            state.screenArea.position.y = state.player.top;
+        }
+
         state.screenArea.position.y += state.screenArea.speed + state.screenArea.speedBoost;
         state.backgroundY -= (state.screenArea.speed + state.screenArea.speedBoost) / 10;
+        state.screenArea.speed = Math.max(-200 * SPEED_UNIT, state.screenArea.speed - 0.005 * SPEED_UNIT);
     };
 
     let gameTimeGap = 0;
     let currentStep: number = 0;
 
-    const MAX_PLATFORMS = 50;
-    const state: GameState = {
-        paused: false,
-        over: false,
-        previousTime: 0,
-        player: new Player(),
-        objects: new Set(),
-        screenArea: new ScreenArea(),
-        nextPlatformTop: 0,
-        previousPlatformX: 0,
-        backgroundY: -background.height * Math.random(),
-        onPlatform: null,
-    };
+    const state = new GameState();
 
+    state.backgroundY = background.getHeight() * Math.random();
     state.player.position.x = (WORLD_SIZE - state.player.width) / 2;
     state.player.position.y = 10;
 
@@ -574,8 +798,13 @@ export const createGame = async () => {
     }
 
     const animate = (currentTime: number) => {
-        context.drawImage(background, (canvas.width - background.width) / 2, state.backgroundY);
-        context.drawImage(background, (canvas.width - background.width) / 2, state.backgroundY + background.height);
+        if (state.player.top > state.screenArea.bottom) {
+            state.over = true;
+            LocalStorage.update(storage => storage.highScore = Math.max(storage.highScore, state.score));
+            activateMenu();
+        }
+
+        background.draw(context, state.backgroundY);
         render(state);
 
         const timeGap = Math.min(500, currentTime - state.previousTime + gameTimeGap);
@@ -586,10 +815,6 @@ export const createGame = async () => {
         const targetStep = currentStep + stepsTorun;
         for (; currentStep < targetStep; currentStep++) {
             tick();
-        }
-
-        if (state.backgroundY > 0) {
-            state.backgroundY -= background.height;
         }
         //fpsCounter++;
     };
