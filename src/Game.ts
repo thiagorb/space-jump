@@ -335,6 +335,7 @@ class Rocket extends InteractiveObject {
 
     leftTube: RoundShape;
     rightTube: RoundShape;
+    rotation: number = 0;
 
     constructor() {
         super();
@@ -344,33 +345,47 @@ class Rocket extends InteractiveObject {
         this.leftTube.shadow = this.rightTube.shadow = '#999';
     }
 
-    render(context: CanvasRenderingContext2D) {
-        context.save();
-        context.translate(this.position.x + this.width / 2, this.position.y + this.width / 2);
-        context.scale(60, 60);
-
-
-        context.fillStyle = '#bbb';
+    bodyPath(context: CanvasRenderingContext2D) {
         context.beginPath();
         context.moveTo(0, -1);
         context.bezierCurveTo(0.3, -0.8, 0.3, -0.4, 0.15, -0.1);
         context.lineTo(-0.15, -0.1)
         context.bezierCurveTo(-0.3, -0.4, -0.3, -0.8, 0, -1);
         context.closePath();
-        context.fill();
+    }
 
-        context.fillStyle = '#69f';
+    wingsPath(context: CanvasRenderingContext2D) {
         context.beginPath();
         context.moveTo(0.25, -0.5);
         context.bezierCurveTo(0.45, -0.35, 0.4, 0, 0.4, 0);
         context.bezierCurveTo(0.3, -0.2, 0.20, -0.2, 0.20, -0.2);
-        context.closePath();
-        context.fill();
-        context.beginPath();
         context.moveTo(-0.25, -0.5);
         context.bezierCurveTo(-0.45, -0.35, -0.4, 0, -0.4, 0);
         context.bezierCurveTo(-0.3, -0.2, -0.20, -0.2, -0.20, -0.2);
         context.closePath();
+    }
+
+    render(context: CanvasRenderingContext2D) {
+        context.save();
+        context.translate(this.position.x + this.width / 2, this.position.y + this.width / 2);
+        context.scale(60, 60);
+        context.rotate(Math.cos(this.rotation * 0.1) * 0.1);
+        this.rotation++;
+
+        context.lineWidth = 0.07;
+        context.lineCap = 'round';
+        context.strokeStyle = '#fff';
+        this.bodyPath(context);
+        context.stroke();
+        this.wingsPath(context);
+        context.stroke();
+
+        context.fillStyle = '#bbb';
+        this.bodyPath(context);
+        context.fill();
+
+        context.fillStyle = '#69f';
+        this.wingsPath(context);
         context.fill();
 
         context.restore();
@@ -385,7 +400,9 @@ class Rocket extends InteractiveObject {
             soundPlayer.playRocket();
             state.player.speed.y = -1.5 * JUMP_SPEED;
             state.player.rocket = true;
-            state.screenArea.speedBoost = -1.2 * JUMP_SPEED - state.screenArea.speed;
+
+            const deltaY = 1 - (state.player.top - state.screenArea.top) / WORLD_SIZE;
+            state.screenArea.speedBoost = -1.6 * deltaY * JUMP_SPEED - state.screenArea.speed;
         }
     }
 }
@@ -681,7 +698,7 @@ class GameState {
             platform.position.x = between(0, WORLD_SIZE - platform.width, this.previousPlatformX + (0.5 - Math.random()) * 500);
             platform.position.y = this.nextPlatformTop;
             this.previousPlatformX = platform.position.x;
-            this.nextPlatformTop = this.nextPlatformTop - 100 - Math.random() * 40;
+            this.nextPlatformTop = this.nextPlatformTop - 100 - Math.random() * 50;
 
             if (type > 0.9 || (this.rockets && type >= 0.4)) {
                 const rocket = new Rocket();

@@ -250,7 +250,7 @@ let logo: HTMLCanvasElement;
 const drawLogo = () => {
     logo = document.querySelector<HTMLCanvasElement>('#logo');
     const ratio = 0.37;
-    logo.width = screen.width * 0.8;
+    logo.width = Math.max(screen.height, screen.width) * 0.4;
     logo.height = logo.width * ratio;
     const context = logo.getContext('2d');
     const scale = logo.width;
@@ -271,7 +271,6 @@ const drawLogo = () => {
     const finalI = Math.ceil(0.01 * scale) * 4;
     for (let i = 0; i <= finalI; i += 4) {
         const progress = i / finalI;
-        console.log(progress);
         context2.clearRect(0, 0, canvas2.width, canvas2.height);
         context3.clearRect(0, 0, canvas3.width, canvas3.height);
         const quadratic = progress * progress;
