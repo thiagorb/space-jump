@@ -419,7 +419,7 @@ abstract class Platform extends InteractiveObject {
     }
 
     preTick(state: GameState) {
-        if (!keyboard.arrowDown && state.player.speed.y >= 0 && this.isPlayerOn(state.player)) {
+        if (this !== state.ignorePlatform && state.player.speed.y >= 0 && this.isPlayerOn(state.player)) {
             state.onPlatform = this;
             state.player.position.y = this.top - state.player.height;
         }
@@ -673,14 +673,23 @@ class GameState {
     previousPlatformX: number = 0;
     backgroundY: number = 0;
     onPlatform: Platform | null = null;
+    ignorePlatform: Platform | null = null;
     highScore: number = LocalStorage.get().highScore;
     score: number = 0;
     rockets: boolean = false;
 
     tick() {
+        if (keyboard.arrowDown && !this.ignorePlatform) {
+            this.ignorePlatform = this.onPlatform;
+        }
+
         this.onPlatform = null;
         for (const object of this.objects) {
             object.preTick(this);
+        }
+
+        if (this.onPlatform && this.onPlatform !== this.ignorePlatform) {
+            this.ignorePlatform = null;
         }
 
         if (this.screenArea.top - WORLD_SIZE < this.nextPlatformTop) {
