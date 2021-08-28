@@ -1,14 +1,13 @@
 import { soundPlayer } from "./Audio";
 import { memoizedBackgroundPattern } from "./Background";
-import { createGame } from "./Game";
+import { createGame, Player } from "./Game";
 import { context, keyboard, keyboardMap, scene, setContext, WORLD_SIZE } from "./Globals";
 import { LocalStorage } from "./LocalStorage";
 
 const resize = () => {
-    document.querySelectorAll('canvas').forEach(canvas => {
-        canvas.width = canvas.clientWidth;
-        canvas.height = canvas.clientHeight;
-    });
+    const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
 
     scene.scale = Math.min(window.innerWidth / WORLD_SIZE, window.innerHeight / WORLD_SIZE);
 };
@@ -116,11 +115,24 @@ let menuActive = false;
 
 export const activateMenu = async () => {
     const background = await memoizedBackgroundPattern().getBackground();
+    const player = new Player();
+    player.animation = player.fallingAnimation;
 
     let backgroundY = background.getHeight() * Math.random();
     let previousTime = null;
     const renderBackground = (time: number) => {
         background.draw(context, backgroundY);
+
+        context.save();
+        context.translate(window.innerWidth / 2, window.innerHeight / 2);
+        context.scale(scene.scale, scene.scale);
+        context.translate(-WORLD_SIZE / 2, -WORLD_SIZE / 2);
+        player.position.x = 230;
+        player.position.y = 450;
+
+        player.render(context);
+        context.restore();
+
         if (previousTime) {
             backgroundY += (time - previousTime) * 0.01;
         }
@@ -223,6 +235,71 @@ const initializeCursor = () => {
     document.body.append(cursorStyle);
 };
 
+const stampCircle = (context: CanvasRenderingContext2D, stamp: HTMLCanvasElement, textRadius: number, x: number, y: number) => {
+    textRadius = textRadius;
+    for (let i = -textRadius; i <= textRadius; i++) {
+        const angle = Math.acos(i / textRadius);
+        const sin = Math.sin(angle) * textRadius;
+        for (let j = -sin; j <= sin; j++) {
+            context.drawImage(stamp, i + x, j + y);
+        }
+    }
+};
+
+let logo: HTMLCanvasElement;
+const drawLogo = () => {
+    logo = document.querySelector<HTMLCanvasElement>('#logo');
+    const ratio = 0.15;
+    logo.width = screen.width * 0.4;
+    logo.height = screen.width * ratio;
+    const context = logo.getContext('2d');
+    const scale = logo.width;
+
+    const canvas2 = document.createElement('canvas');
+    canvas2.width = logo.width;
+    canvas2.height = logo.height;
+    const context2 = canvas2.getContext('2d');
+    context2.font = `bolder ${0.27 * scale}px Arial`;
+    context2.textBaseline = 'top';
+    context2.textAlign = 'center';
+
+    const canvas3 = document.createElement('canvas');
+    canvas3.width = logo.width;
+    canvas3.height = logo.height;
+    const context3 = canvas3.getContext('2d');
+
+    const finalI = Math.ceil(0.01 * scale) * 4;
+    for (let i = 0; i <= finalI; i += 4) {
+        const progress = i / finalI;
+        console.log(progress);
+        context2.clearRect(0, 0, canvas2.width, canvas2.height);
+        context3.clearRect(0, 0, canvas3.width, canvas3.height);
+        const quadratic = progress * progress;
+        context2.fillStyle = `hsla(${220}, 100%, ${50 + (quadratic * 50)}%, 1)`;
+        context2.fillText('SPACE', 0.5 * scale, 0.01 * scale);
+        stampCircle(context3, canvas2, 1 + finalI - i, 0, (finalI - i) * 0.4);
+        context.globalAlpha = 1;
+        context.globalCompositeOperation = 'destination-out';
+        context.drawImage(canvas3, 0, 0);
+        context.globalCompositeOperation = 'source-over';
+        context.globalAlpha = progress;
+        context.drawImage(canvas3, 0, 0);
+    }
+
+    context2.font = `bolder ${0.2 * scale}px Arial`;
+    context2.clearRect(0, 0, canvas2.width, canvas2.height);
+    context3.clearRect(0, 0, canvas3.width, canvas3.height);
+    context2.rotate(-0.08);
+    context2.fillStyle = '#000';
+    context2.fillText('JUMP', 0.6 * scale, 0.23 * scale);
+    stampCircle(context, canvas2, 5, 0, 0);
+
+    context2.fillStyle = '#fff';
+    context2.clearRect(0, 0, canvas2.width, canvas2.height);
+    context2.fillText('JUMP', 0.6 * scale, 0.23 * scale);
+    context.drawImage(canvas2, 0, 0);
+};
+
 const enableCursor = () => {
     document.body.classList.add('cursor');
 };
@@ -243,6 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
         pattern.increment();
         activateMenu();
         updateAudioText();
+        drawLogo();
         fadeInTransition(500);
     };
 
@@ -267,18 +345,21 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     document.querySelector('#start').addEventListener('click', () => startGame());
-    document.querySelector('#rockets').addEventListener('click', () => startGame({rockets: true}));
+    document.querySelector('#rockets').addEventListener('click', () => startGame({ rockets: true }));
 
     const goToFullscreen = () => {
         if (!LocalStorage.get().fullscreen || !document.fullscreenEnabled) {
+            if (!document.fullscreenEnabled) {
+                document.querySelector('#fullscreen').remove();
+            }
             document.querySelector('#fullscreen-question').remove();
-            document.querySelector('#fullscreen').remove();
             goToAudio();
-        } else {
-            activeScreen = document.querySelector('#fullscreen-question');
-            setActiveButton(document.querySelector('#fullscreen--yes'));
-            fadeInTransition();
+            return;
         }
+
+        activeScreen = document.querySelector('#fullscreen-question');
+        setActiveButton(document.querySelector('#fullscreen--yes'));
+        fadeInTransition();
     };
 
     const goToAudio = () => {

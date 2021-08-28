@@ -57,7 +57,7 @@ class RoundShape {
     }
 }
 
-const drawRoundShapeLight = (roundShape: RoundShape) => {
+const drawRoundShapeLight = (context: CanvasRenderingContext2D, roundShape: RoundShape) => {
     context.save();
 
     context.strokeStyle = roundShape.light;
@@ -72,7 +72,7 @@ const drawRoundShapeLight = (roundShape: RoundShape) => {
     context.restore();
 };
 
-const drawRoundShape = (roundShape: RoundShape) => {
+const drawRoundShape = (context: CanvasRenderingContext2D, roundShape: RoundShape) => {
     context.strokeStyle = roundShape.shadow;
     context.lineWidth = roundShape.width;
     context.beginPath();
@@ -159,7 +159,7 @@ export class Player extends GameObject {
         }
     }
 
-    render() {
+    render(context: CanvasRenderingContext2D) {
         context.save();
 
         if (this.rocket) {
@@ -217,33 +217,33 @@ export class Player extends GameObject {
 
         context.lineCap = 'round';
 
-        drawRoundShape(this.leftArm);
-        drawRoundShape(this.rightArm);
-        drawRoundShapeLight(this.rightArm);
-        drawRoundShapeLight(this.leftArm);
-        drawRoundShape(this.leftLeg);
-        drawRoundShape(this.rightLeg);
-        drawRoundShapeLight(this.leftLeg);
-        drawRoundShapeLight(this.rightLeg);
+        drawRoundShape(context, this.leftArm);
+        drawRoundShape(context, this.rightArm);
+        drawRoundShapeLight(context, this.rightArm);
+        drawRoundShapeLight(context, this.leftArm);
+        drawRoundShape(context, this.leftLeg);
+        drawRoundShape(context, this.rightLeg);
+        drawRoundShapeLight(context, this.leftLeg);
+        drawRoundShapeLight(context, this.rightLeg);
 
-        drawRoundShape(this.head);
-        drawRoundShape(this.body);
+        drawRoundShape(context, this.head);
+        drawRoundShape(context, this.body);
 
-        drawRoundShapeLight(this.head);
-        drawRoundShapeLight(this.body);
+        drawRoundShapeLight(context, this.head);
+        drawRoundShapeLight(context, this.body);
 
         if (this.direction === 1) {
-            drawRoundShapeLight(this.leftLeg);
-            drawRoundShape(this.leftArm);
-            drawRoundShapeLight(this.leftArm);
+            drawRoundShapeLight(context, this.leftLeg);
+            drawRoundShape(context, this.leftArm);
+            drawRoundShapeLight(context, this.leftArm);
         } else {
-            drawRoundShapeLight(this.rightLeg);
-            drawRoundShape(this.rightArm);
-            drawRoundShapeLight(this.rightArm);
+            drawRoundShapeLight(context, this.rightLeg);
+            drawRoundShape(context, this.rightArm);
+            drawRoundShapeLight(context, this.rightArm);
         }
 
         context.fillStyle = 'black';
-        this.drawGlass();
+        this.drawGlass(context);
         /*
         context.font = '0.4px Arial';
         context.textAlign = 'center';
@@ -263,7 +263,7 @@ export class Player extends GameObject {
         context.restore();
     }
 
-    drawGlass() {
+    drawGlass(context: CanvasRenderingContext2D) {
         context.beginPath();
         const startX = 0.3 * this.direction;
         const startY = -0.9;
@@ -272,10 +272,6 @@ export class Player extends GameObject {
         context.bezierCurveTo(0.4 * this.direction, -0.3, 0.73 * this.direction, -0.5, startX, startY);
         context.closePath();
         context.fill();
-    }
-
-    isOn(platform: Platform): boolean {
-        return Math.abs(this.bottom - platform.top) < 5 && this.right > platform.left && this.left < platform.right;
     }
 
     tick(state: GameState) {
@@ -328,7 +324,7 @@ export class Player extends GameObject {
 }
 
 abstract class InteractiveObject extends GameObject {
-    abstract render(): void;
+    abstract render(context: CanvasRenderingContext2D): void;
     tick(state: GameState) { }
     preTick(state: GameState) { }
 }
@@ -348,7 +344,7 @@ class Rocket extends InteractiveObject {
         this.leftTube.shadow = this.rightTube.shadow = '#999';
     }
 
-    render() {
+    render(context: CanvasRenderingContext2D) {
         context.save();
         context.translate(this.position.x + this.width / 2, this.position.y + this.width / 2);
         context.scale(60, 60);
@@ -398,7 +394,7 @@ abstract class Platform extends InteractiveObject {
     width: number = 100;
     height: number = 20;
 
-    abstract render(): void;
+    abstract render(context: CanvasRenderingContext2D): void;
     tick(state: GameState) {
         if (this.position.y > state.screenArea.bottom + WORLD_SIZE) {
             state.objects.delete(this);
@@ -406,16 +402,19 @@ abstract class Platform extends InteractiveObject {
     }
 
     preTick(state: GameState) {
-        if (state.player.speed.y >= 0 && state.player.isOn(this)) {
+        if (state.player.speed.y >= 0 && this.isPlayerOn(state.player)) {
             state.onPlatform = this;
             state.player.position.y = this.top - state.player.height;
         }
     }
+
+    isPlayerOn(player: Player): boolean {
+        return Math.abs(player.bottom - this.top) < 5 && player.right > this.left && player.left < this.right;
+    }
 }
 
 class StaticPlatform extends Platform {
-    render() {
-
+    render(context: CanvasRenderingContext2D) {
         context.save();
         context.translate(this.position.x, this.position.y);
 
@@ -473,7 +472,7 @@ class IcePlatform extends Platform {
     time: number = IcePlatform.maxTime;
     disappearing: boolean = false;
 
-    render() {
+    render(context: CanvasRenderingContext2D) {
         context.save();
         context.translate(this.position.x, this.position.y);
         context.globalAlpha = this.time / IcePlatform.maxTime;
@@ -553,6 +552,10 @@ class IcePlatform extends Platform {
         }
     }
 
+    isPlayerOn(player: Player): boolean {
+        return this.time > IcePlatform.maxTime * 0.7 && super.isPlayerOn(player);
+    }
+
     static get maxTime() {
         return 500 * STEPS_PER_MILISECOND;
     }
@@ -586,7 +589,7 @@ class MovingPlatform extends Platform {
         context.restore();
     }
 
-    render() {
+    render(context: CanvasRenderingContext2D) {
         context.save();
         context.translate(this.position.x, this.position.y);
 
@@ -678,7 +681,7 @@ class GameState {
             platform.position.x = between(0, WORLD_SIZE - platform.width, this.previousPlatformX + (0.5 - Math.random()) * 500);
             platform.position.y = this.nextPlatformTop;
             this.previousPlatformX = platform.position.x;
-            this.nextPlatformTop = this.nextPlatformTop - 100 - Math.random() * 100 * STEPS_PER_MILISECOND;
+            this.nextPlatformTop = this.nextPlatformTop - 100 - Math.random() * 40;
 
             if (type > 0.9 || (this.rockets && type >= 0.4)) {
                 const rocket = new Rocket();
@@ -740,9 +743,9 @@ const render = (state: GameState) => {
 
     // render objects
     for (const object of state.objects) {
-        object.render();
+        object.render(context);
     }
-    state.player.render();
+    state.player.render(context);
 
     context.restore();
 

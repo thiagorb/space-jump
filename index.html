@@ -71,6 +71,12 @@
                 text-align: right;
             }
 
+            #logo {
+                width: 80vmin;
+                height: 30vmin;
+                margin: 0 -25vmin;
+            }
+
             #game {
                 width: 100vw;
                 height: 100vh;
@@ -84,7 +90,7 @@
                 width: 100vw;
                 height: 100vh;
                 display: grid;
-                gap: 5vmin;
+                gap: 3vmin;
                 justify-content: center;
                 align-items: center;
                 align-content: center;
@@ -209,6 +215,7 @@
         </div>
 
         <div id="menu">
+            <canvas id="logo"></canvas>
             <div id="start" class="button outline-text" data-text="START GAME"></div>
             <div id="rockets" class="button outline-text subscriber-only" data-text="ROCKETS!!!"></div>
             <div id="audio" class="button outline-text" data-text="AUDIO ON"></div>

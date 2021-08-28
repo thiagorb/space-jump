@@ -1,5 +1,3 @@
-custom font
-logo with name + character
 add music
 add alternative controls for mobile
 add key to fall from platforms
@@ -13,3 +11,4 @@ add "usable" rocket power up
 add solid blocks power "down"
 block that kills
 split hi-score between rocket not rocket
+custom font
