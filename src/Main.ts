@@ -122,6 +122,7 @@ export const activateMenu = async () => {
         }
     };
 
+    enableCursor();
     menuActive = true;
     const menu = document.querySelector<HTMLDivElement>('#menu');
     menu.style.display = null;
@@ -131,6 +132,7 @@ export const activateMenu = async () => {
 };
 
 const deactivateMenu = () => {
+    disableCursor();
     menuActive = false;
     activeScreen = null;
     document.querySelector<HTMLDivElement>('#menu').style.display = 'none';
@@ -188,6 +190,34 @@ export const fadeOutTransition = async (ms: number = 500) => {
     fadeTransition.classList.add('visible');
     fadeTransition.style.zIndex = '1';
     await wait(ms);
+};
+
+let cursor: HTMLCanvasElement;
+const initializeCursor = () => {
+    cursor = document.createElement('canvas');
+    cursor.width = screen.width * 0.02;
+    cursor.height = screen.width * 0.02;
+    const context = cursor.getContext('2d');
+    context.scale(cursor.width / 100, cursor.width / 100);
+    context.fillStyle = '#303';
+    context.strokeStyle = '#fff';
+    context.lineWidth = 5;
+    context.beginPath();
+    context.moveTo(0, 0);
+    context.lineTo(100, 30);
+    context.lineTo(45, 45);
+    context.lineTo(30, 100);
+    context.closePath();
+    context.fill();
+    context.stroke();
+};
+
+const enableCursor = () => {
+    document.body.style.cursor = `url('${cursor.toDataURL()}'), auto`;
+};
+
+const disableCursor = () => {
+    document.body.style.cursor = 'none';
 };
 
 let activeScreen: HTMLDivElement = null;
@@ -300,6 +330,9 @@ document.addEventListener('DOMContentLoaded', () => {
             soundPlayer.playClick();
         }
     });
+
+    initializeCursor();
+    enableCursor();
 
     goToFullscreen();
 });

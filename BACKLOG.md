@@ -1,4 +1,3 @@
-add custom cursor
 fix cursor not disappearing after starting game
 add option to pause
 add monetization
