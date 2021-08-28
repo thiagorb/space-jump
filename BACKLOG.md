@@ -1,8 +1,9 @@
-add monetization
-add fullscreen button
 make it possible to choose buttons using keyboard
 add custom cursor
 fix cursor not disappearing after starting game
+add option to pause
+add monetization
+add alternative controls for mobile
 custom font
 logo with name + character
 add music

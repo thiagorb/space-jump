@@ -158,6 +158,14 @@ document.addEventListener('DOMContentLoaded', () => {
         setAudioActive(!soundPlayer.enabled);
     });
 
+    document.querySelector('#fullscreen').addEventListener('click', () => {
+        if (document.fullscreenElement) {
+            document.exitFullscreen();
+        } else {
+            body.requestFullscreen();
+        }
+    });
+
     document.querySelector('#start').addEventListener('click', async () => {
         deactivateMenu();
         await fadeOutTransition();
@@ -255,7 +263,7 @@ if (isTouchDevice()) {
         callback(event);
     };
 
-    const filterTouch = callback => event => {
+    const filterTouch = (callback: (key: string) => void) => (event: TouchEvent) => {
         const key = (event.target as HTMLDivElement).getAttribute('data-touch-key');
         if (key in keyboard) {
             event.preventDefault();
@@ -263,8 +271,8 @@ if (isTouchDevice()) {
         }
     };
 
-    const flagKey = key => keyboard[key] = true;
-    const unflagKey = key => keyboard[key] = false;
+    const flagKey = (key: string) => keyboard[key] = true;
+    const unflagKey = (key: string) => keyboard[key] = false;
 
     document.addEventListener('touchstart', setActive(filterTouch(flagKey)));
     document.addEventListener('touchend', unsetActive(filterTouch(unflagKey)));
