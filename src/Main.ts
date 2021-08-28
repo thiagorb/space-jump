@@ -51,7 +51,9 @@ const getNextButton = (direction: 1 | -1) => {
         return undefined;
     }
 
-    const allButtons = activeScreen.querySelectorAll<HTMLDivElement>('.button');
+    const allButtons = Array.from(activeScreen.querySelectorAll<HTMLDivElement>('.button'))
+        .filter(b => b.offsetWidth > 0);
+
     let i: number;
     for (i = 0; i < allButtons.length; i++) {
         if (allButtons[i].classList.contains('active')) {
@@ -256,17 +258,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    document.querySelector('#start').addEventListener('click', async () => {
+    const startGame = async (params = {}) => {
         deactivateMenu();
         await fadeOutTransition();
-        activeGame = createGame();
+        activeGame = createGame(params);
         activeGame.start();
         await fadeInTransition(5000);
-    });
+    };
+
+    document.querySelector('#start').addEventListener('click', () => startGame());
+    document.querySelector('#rockets').addEventListener('click', () => startGame({rockets: true}));
 
     const goToFullscreen = () => {
         if (!LocalStorage.get().fullscreen || !document.fullscreenEnabled) {
             document.querySelector('#fullscreen-question').remove();
+            document.querySelector('#fullscreen').remove();
             goToAudio();
         } else {
             activeScreen = document.querySelector('#fullscreen-question');
@@ -349,6 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector<HTMLDivElement>('#pause--abort').addEventListener('click', async () => {
         await unpause();
         activeGame.end();
+        activeGame = null;
     });
 
     initializeCursor();

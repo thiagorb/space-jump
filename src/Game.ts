@@ -281,11 +281,11 @@ export class Player extends GameObject {
     tick(state: GameState) {
         const horizontalAccel = ACCELERATION_UNIT * 2000;
         const maxHorizontalSpeed = SPEED_UNIT * 500;
-        if (keyboard.arrowLeft) {
+        if (!state.ending && keyboard.arrowLeft) {
             state.player.speed.x = Math.max(-maxHorizontalSpeed, state.player.speed.x - horizontalAccel);
             state.player.direction = -1;
             state.player.animation = state.player.runAnimation;
-        } else if (keyboard.arrowRight) {
+        } else if (!state.ending && keyboard.arrowRight) {
             state.player.speed.x = Math.min(maxHorizontalSpeed, state.player.speed.x + horizontalAccel);
             state.player.direction = 1;
             state.player.animation = state.player.runAnimation;
@@ -302,7 +302,7 @@ export class Player extends GameObject {
         // gravity
         if (!state.onPlatform) {
             state.player.speed.y = Math.min(TERMINAL_VELOCITY, state.player.speed.y + GRAVITY);
-        } else if (keyboard.arrowUp) {
+        } else if (!state.ending && keyboard.arrowUp) {
             state.player.speed.y = -JUMP_SPEED;
             state.player.animation = state.player.jumpAnimation;
             state.player.currentFrame = 0;
@@ -654,6 +654,7 @@ class GameState {
     onPlatform: Platform | null = null;
     highScore: number = LocalStorage.get().highScore;
     score: number = 0;
+    rockets: boolean = false;
 
     tick() {
         this.onPlatform = null;
@@ -678,7 +679,7 @@ class GameState {
             this.previousPlatformX = platform.position.x;
             this.nextPlatformTop = this.nextPlatformTop - 100 - Math.random() * 100 * STEPS_PER_MILISECOND;
 
-            if (type > 0.9) {
+            if (type > 0.9 || (this.rockets && type >= 0.4)) {
                 const rocket = new Rocket();
                 rocket.position.x = platform.left + (platform.width - rocket.width) * Math.random();
                 rocket.position.y = platform.top - rocket.height;
@@ -710,11 +711,6 @@ class GameState {
             this.score = -Math.round(this.screenArea.top / 100);
         }
     }
-}
-
-interface MovableObject {
-    position: Vector2D;
-    speed: Vector2D
 }
 
 /*
@@ -771,7 +767,7 @@ const render = (state: GameState) => {
     */
 };
 
-export const createGame = () => {
+export const createGame = ({rockets = false}) => {
     const background = memoizedBackgroundPattern().getBackground();
 
     let gameTimeGap = 0;
@@ -782,6 +778,7 @@ export const createGame = () => {
     state.backgroundY = background.getHeight() * Math.random();
     state.player.position.x = (WORLD_SIZE - state.player.width) / 2;
     state.player.position.y = 10;
+    state.rockets = rockets;
 
     {
         const platform = new StaticPlatform();
