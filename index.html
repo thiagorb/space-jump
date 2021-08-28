@@ -39,6 +39,7 @@
                 overflow: visible;
                 position: relative;
                 cursor: pointer;
+                text-align: center;
             }
 
             .button:after {
@@ -80,7 +81,7 @@
                 background-color: black;
             }
 
-            #menu, #fullscreen {
+            #menu, .question, #fade-transition {
                 width: 100vw;
                 height: 100vh;
                 display: grid;
@@ -93,35 +94,37 @@
                 top: 0;
             }
 
-            #fullscreen {
+            .question {
                 background-color: #000;
             }
 
-            #fullscreen * {
-                transition: opacity 0.3s;
-            }
-
-            #fullscreen.hidden * {
+            #fade-transition {
                 opacity: 0;
+                background-color: #000;
             }
 
-            #fullscreen--text {
+            #fade-transition.visible {
+                opacity: 1;
+            }
+
+            .question--text {
                 grid-column-start: 1;
                 grid-column-end: 3;
                 grid-row: 1;
+                text-shadow: 0 0 1px #fff;
             }
 
-            #fullscreen--yes {
+            .question--yes {
                 grid-column: 1;
                 grid-row: 2;
             }
 
-            #fullscreen--no {
+            .question--no {
                 grid-column: 2;
                 grid-row: 2;
             }
 
-            #fullscreen--no:after {
+            .question--no:after {
                 background-color: #888;
             }
 
@@ -183,12 +186,21 @@
 
         <div id="menu">
             <div id="start" class="button outline-text" data-text="START GAME"></div>
+            <div id="audio" class="button outline-text" data-text="AUDIO ON"></div>
         </div>
 
-        <div id="fullscreen" class="hidden">
-            <div id="fullscreen--text" class="outline-text" data-text="DO YOU WANT TO PLAY IN FULLSCREEN?"></div>
-            <div id="fullscreen--yes" class="button outline-text" data-text="YES, PLEASE"></div>
-            <div id="fullscreen--no" class="button outline-text" data-text="NO, THANKS"></div>
+        <div id="audio-question" class="question">
+            <div class="question--text outline-text" data-text="DO YOU WANT TO ENABLE SOUND?"></div>
+            <div id="audio--yes" class="question--yes button outline-text" data-text="YES, PLEASE"></div>
+            <div id="audio--no" class="question--no button outline-text" data-text="NO, THANKS"></div>
         </div>
+
+        <div id="fullscreen-question" class="question">
+            <div class="question--text outline-text" data-text="DO YOU WANT TO PLAY IN FULLSCREEN?"></div>
+            <div id="fullscreen--yes" class="question--yes button outline-text" data-text="YES, PLEASE"></div>
+            <div id="fullscreen--no" class="question--no button outline-text" data-text="NO, THANKS"></div>
+        </div>
+
+        <div id="fade-transition" class="visible"></div>
     </body>
 </html>

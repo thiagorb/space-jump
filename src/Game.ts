@@ -1,9 +1,9 @@
-import { playRocket } from "./Audio";
+import { soundPlayer } from "./Audio";
 import { memoizedBackgroundPattern } from "./Background";
 import { WORLD_SIZE, GRAVITY, TERMINAL_VELOCITY, STEPS_PER_MILISECOND, SPEED_UNIT, STEPS_PER_SECOND, URL_RADIUS, scene as scene, canvas, context, keyboard, JUMP_SPEED, ACCELERATION_UNIT, menu } from "./Globals";
 import { between, sign } from "./Helpers";
 import { LocalStorage } from "./LocalStorage";
-import { activateMenu } from "./Main";
+import { activateMenu, fadeInTransition, fadeOutTransition, waitNextFrame } from "./Main";
 import { Vector2D } from "./Vectorial";
 
 abstract class GameObject {
@@ -306,6 +306,7 @@ export class Player extends GameObject {
             state.player.speed.y = -JUMP_SPEED;
             state.player.animation = state.player.jumpAnimation;
             state.player.currentFrame = 0;
+            soundPlayer.playJump();
         } else if (state.player.speed.y > 0) {
             state.player.speed.y = 0;
         }
@@ -384,8 +385,8 @@ class Rocket extends InteractiveObject {
             state.objects.delete(this);
         }
 
-        if (this.boundBoxCollision(state.player)) {
-            playRocket();
+        if (!state.ending && this.boundBoxCollision(state.player)) {
+            soundPlayer.playRocket();
             state.player.speed.y = -1.5 * JUMP_SPEED;
             state.player.rocket = true;
             state.screenArea.speedBoost = -1.2 * JUMP_SPEED - state.screenArea.speed;
@@ -467,14 +468,14 @@ class StaticPlatform extends Platform {
     }
 }
 
-class TemporaryPlatform extends Platform {
-    time: number = TemporaryPlatform.maxTime;
+class IcePlatform extends Platform {
+    time: number = IcePlatform.maxTime;
     disappearing: boolean = false;
 
     render() {
         context.save();
         context.translate(this.position.x, this.position.y);
-        context.globalAlpha = this.time / TemporaryPlatform.maxTime;
+        context.globalAlpha = this.time / IcePlatform.maxTime;
 
         // Start bottom and middle
         context.save();
@@ -547,6 +548,7 @@ class TemporaryPlatform extends Platform {
 
         if (state.onPlatform === this) {
             this.disappearing = true;
+            soundPlayer.playIce();
         }
     }
 
@@ -640,6 +642,7 @@ class MovingPlatform extends Platform {
 
 class GameState {
     paused: boolean = false;
+    ending: boolean = false;
     over: boolean = false;
     previousTime: number = 0;
     player: Player = new Player();
@@ -650,9 +653,62 @@ class GameState {
     backgroundY: number = 0;
     onPlatform: Platform | null = null;
     highScore: number = LocalStorage.get().highScore;
+    score: number = 0;
 
-    get score() {
-        return -Math.round(this.screenArea.top / 100);
+    tick() {
+        this.onPlatform = null;
+        for (const object of this.objects) {
+            object.preTick(this);
+        }
+
+        if (this.screenArea.top - WORLD_SIZE < this.nextPlatformTop) {
+            let platform: Platform;
+            const type = Math.random();
+            if (type < 0.1) {
+                platform = new IcePlatform();
+            } else if (type < 0.4) {
+                platform = new MovingPlatform();
+            } else {
+                platform = new StaticPlatform();
+            }
+
+            this.objects.add(platform);
+            platform.position.x = between(0, WORLD_SIZE - platform.width, this.previousPlatformX + (0.5 - Math.random()) * 500);
+            platform.position.y = this.nextPlatformTop;
+            this.previousPlatformX = platform.position.x;
+            this.nextPlatformTop = this.nextPlatformTop - 100 - Math.random() * 100 * STEPS_PER_MILISECOND;
+
+            if (type > 0.9) {
+                const rocket = new Rocket();
+                rocket.position.x = platform.left + (platform.width - rocket.width) * Math.random();
+                rocket.position.y = platform.top - rocket.height;
+                this.objects.add(rocket);
+            }
+        }
+
+        this.player.tick(this);
+
+        for (const object of this.objects) {
+            object.tick(this);
+        }
+
+        if (this.screenArea.speedBoost < 0) {
+            this.screenArea.speedBoost += GRAVITY;
+        }
+
+        if (this.screenArea.top > this.player.top) {
+            this.screenArea.position.y = this.player.top;
+        }
+
+        this.screenArea.position.y += this.screenArea.speed + this.screenArea.speedBoost;
+        this.backgroundY -= (this.screenArea.speed + this.screenArea.speedBoost) / 10;
+        this.screenArea.speed = Math.max(-200 * SPEED_UNIT, this.screenArea.speed - 0.005 * SPEED_UNIT);
+    }
+
+    updateScore() {
+        if (!this.ending) {
+            this.score = -Math.round(this.screenArea.top / 100);
+        }
     }
 }
 
@@ -728,58 +784,6 @@ export const start = async () => {
 export const createGame = async () => {
     const background = await (memoizedBackgroundPattern().getBackground());
 
-    const tick = () => {
-        // check if player is on platform
-        state.onPlatform = null;
-        for (const object of state.objects) {
-            object.preTick(state);
-        }
-
-        if (state.screenArea.top - WORLD_SIZE < state.nextPlatformTop) {
-            let platform: Platform;
-            const type = Math.random();
-            if (type < 0.1) {
-                platform = new TemporaryPlatform();
-            } else if (type < 0.4) {
-                platform = new MovingPlatform();
-            } else {
-                platform = new StaticPlatform();
-            }
-
-            state.objects.add(platform);
-            platform.position.x = between(0, WORLD_SIZE - platform.width, state.previousPlatformX + (0.5 - Math.random()) * 500);
-            platform.position.y = state.nextPlatformTop;
-            state.previousPlatformX = platform.position.x;
-            state.nextPlatformTop = state.nextPlatformTop - 100 - Math.random() * 100 * STEPS_PER_MILISECOND;
-
-            // if (type > 0.0) {
-            if (type > 0.9) {
-                const jetpack = new Rocket();
-                jetpack.position.x = platform.left + (platform.width - jetpack.width) * Math.random();
-                jetpack.position.y = platform.top - jetpack.height;
-                state.objects.add(jetpack);
-            }
-        }
-
-        state.player.tick(state);
-
-        for (const object of state.objects) {
-            object.tick(state);
-        }
-
-        if (state.screenArea.speedBoost < 0) {
-            state.screenArea.speedBoost += GRAVITY;
-        }
-
-        if (state.screenArea.top > state.player.top) {
-            state.screenArea.position.y = state.player.top;
-        }
-
-        state.screenArea.position.y += state.screenArea.speed + state.screenArea.speedBoost;
-        state.backgroundY -= (state.screenArea.speed + state.screenArea.speedBoost) / 10;
-        state.screenArea.speed = Math.max(-200 * SPEED_UNIT, state.screenArea.speed - 0.005 * SPEED_UNIT);
-    };
-
     let gameTimeGap = 0;
     let currentStep: number = 0;
 
@@ -798,10 +802,18 @@ export const createGame = async () => {
     }
 
     const animate = (currentTime: number) => {
-        if (state.player.top > state.screenArea.bottom) {
-            state.over = true;
+        state.updateScore();
+
+        if (!state.ending && state.player.top > state.screenArea.bottom) {
+            state.ending = true;
+            soundPlayer.playGameOver();
             LocalStorage.update(storage => storage.highScore = Math.max(storage.highScore, state.score));
-            activateMenu();
+            fadeOutTransition(3000).then(async () => {
+                state.over = true;
+                await waitNextFrame();
+                activateMenu();
+                fadeInTransition(300);
+            });
         }
 
         background.draw(context, state.backgroundY);
@@ -814,13 +826,14 @@ export const createGame = async () => {
         state.previousTime = currentTime;
         const targetStep = currentStep + stepsTorun;
         for (; currentStep < targetStep; currentStep++) {
-            tick();
+            state.tick();
         }
         //fpsCounter++;
     };
 
     const game = {
         initialize: (currentTime: number) => {
+            soundPlayer.playGameStart();
             state.previousTime = currentTime;
             render(state);
         },

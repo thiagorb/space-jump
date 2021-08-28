@@ -1,10 +1,14 @@
-add sounds
-ask about sounds in the beginning
 add monetization
-improve background generation, using random movement path instead of random positions
+add fullscreen button
+make it possible to choose buttons using keyboard
+add custom cursor
+fix cursor not disappearing after starting game
 custom font
 logo with name + character
+add music
 add key to fall from platforms
+add outline to rocket?
+add small rotation animation to rocket
 add enemy (alien)?
 add collectible items (that give extra score)
 add reflection to helmet

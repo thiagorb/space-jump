@@ -1,6 +1,8 @@
+import { soundPlayer } from "./Audio";
 import { memoizedBackgroundPattern } from "./Background";
 import { start as gameStart } from "./Game";
 import { context, keyboard, keyboardMap, menu, scene, WORLD_SIZE } from "./Globals";
+import { LocalStorage } from "./LocalStorage";
 
 const resize = () => {
     document.querySelectorAll('canvas').forEach(canvas => {
@@ -86,47 +88,158 @@ const deactivateMenu = () => {
     menu.style.display = 'none';
 };
 
+const updateAudioText = () => {
+    document.querySelector('#audio').setAttribute('data-text', `AUDIO ${soundPlayer.enabled ? 'YES' : 'NO'}`);
+}
+
+const setAudioActive = (value: boolean) => {
+    LocalStorage.update(storage => storage.audio = soundPlayer.enabled = value);
+    updateAudioText();
+
+    if (value) {
+        soundPlayer.playClick();
+    }
+}
+
+export const waitNextFrame = () => new Promise(window.requestAnimationFrame);
+const wait = (time: number) => new Promise(resolve => setTimeout(resolve, time));
+const waitRelayout = () => document.body.getClientRects() && waitNextFrame();
+
+const waitForConsistentAnimation = async () => {
+    let maxTries = 30;
+    let delta: number;
+    let sequence: number = 0;
+    do {
+        delta = -(await waitNextFrame()) + (await waitNextFrame());
+        if (delta > 1000 / 60) {
+            sequence = 0;
+        } else {
+            sequence++;
+        }
+    } while (--maxTries > 0 && sequence < 5);
+};
+
+const fadeTransition = document.querySelector<HTMLDivElement>('#fade-transition');
+let nextFadeId = 0;
+export const fadeInTransition = async (ms: number = 500) => {
+    const fadeId = ++nextFadeId;
+    await waitForConsistentAnimation();
+    fadeTransition.style.transition = `opacity ${ms}ms`;
+    await waitRelayout();
+    fadeTransition.classList.remove('visible');
+    await wait(ms);
+    if (fadeId === nextFadeId) {
+        fadeTransition.style.zIndex = '-1';
+    }
+};
+
+export const fadeOutTransition = async (ms: number = 500) => {
+    const fadeId = ++nextFadeId;
+    fadeTransition.style.transition = `opacity ${ms}ms`;
+    fadeTransition.classList.add('visible');
+    fadeTransition.style.zIndex = '1';
+    await wait(ms);
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     const body: any = document.body;
 
     resize();
 
     const goToMenu = () => {
-        document.querySelector('#fullscreen').remove();
         const pattern = memoizedBackgroundPattern();
-        for (let i = 0; i < 1; i++) {
-            pattern.increment();
-        }
+        pattern.increment();
         activateMenu();
-
-        document.querySelector('#start').addEventListener('click', () => {
-            deactivateMenu();
-            gameStart();
-        });
+        updateAudioText();
+        fadeInTransition(500);
     };
 
-    document.querySelector('#fullscreen--yes').addEventListener('click', () => {
+    document.querySelector('#audio').addEventListener('click', () => {
+        setAudioActive(!soundPlayer.enabled);
+    });
+
+    document.querySelector('#start').addEventListener('click', async () => {
+        deactivateMenu();
+        await fadeOutTransition();
+        gameStart();
+        await fadeInTransition(5000);
+    });
+
+    const goToFullscreen = () => {
+        if (!LocalStorage.get().fullscreen || !document.fullscreenEnabled) {
+            document.querySelector('#fullscreen-question').remove();
+            goToAudio();
+        } else {
+            fadeInTransition();
+        }
+    };
+
+    const goToAudio = () => {
+        if (!LocalStorage.get().audio) {
+            document.querySelector('#audio-question').remove();
+            goToMenu();
+        } else {
+            fadeInTransition();
+        }
+    };
+
+    document.querySelector('#fullscreen--yes').addEventListener('click', async () => {
+        await closeFullScreen();
         try {
             if (body.webkitEnterFullScreen) {
-                body.webkitEnterFullScreen();
+                await body.webkitEnterFullScreen();
             } else {
-                body.requestFullscreen();
+                await body.requestFullscreen();
             }
         } catch (error) {
             console.error(error);
         }
-        goToMenu();
     });
 
-    document.querySelector('#fullscreen--no').addEventListener('click', () => {
-        goToMenu();
-    });
+    const closeFullScreen = async () => {
+        await fadeOutTransition();
+        memoizedBackgroundPattern().increment();
+        document.querySelector('#fullscreen-question').remove();
+        goToAudio();
+    }
 
-    if (document.fullscreenEnabled) {
-        document.querySelector<HTMLDivElement>('#fullscreen').classList.remove('hidden');
-    } else {
+    const closeAudio = async () => {
+        await fadeOutTransition();
+        memoizedBackgroundPattern().increment();
+        document.querySelector('#audio-question').remove();
         goToMenu();
     }
+
+    document.querySelector('#fullscreen--no').addEventListener('click', () => {
+        LocalStorage.update(storage => storage.fullscreen = false);
+        closeFullScreen();
+    });
+
+    document.querySelector('#audio--no').addEventListener('click', () => {
+        setAudioActive(false);
+        closeAudio();
+    });
+
+    document.querySelector('#audio--yes').addEventListener('click', () => {
+        setAudioActive(true);
+        closeAudio();
+    });
+
+    document.body.addEventListener('mouseover', (event: MouseEvent) => {
+        const element = <Element>event.target;
+        if (element.matches('.button')) {
+            soundPlayer.playMouseOver();
+        }
+    });
+
+    document.body.addEventListener('click', (event: MouseEvent) => {
+        const element = <Element>event.target;
+        if (element.matches('.button')) {
+            soundPlayer.playClick();
+        }
+    });
+
+    goToFullscreen();
 });
 
 if (isTouchDevice()) {

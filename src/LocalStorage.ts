@@ -1,5 +1,7 @@
 interface LocalStorageData {
     highScore: number;
+    audio: boolean;
+    fullscreen: boolean;
 }
 
 let backup: LocalStorageData = null;
@@ -13,9 +15,11 @@ export const LocalStorage = {
             console.error('Failed to load data from local storage', error);
         }
 
-        if (!backup || typeof backup.highScore !== 'number') {
+        if (!backup || typeof backup.highScore !== 'number' || typeof backup.audio !== 'boolean' || typeof backup.fullscreen !== 'boolean') {
             backup = {
                 highScore: 0,
+                audio: true,
+                fullscreen: true,
             };
         }
 
