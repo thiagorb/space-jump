@@ -1,15 +1,5 @@
 const randomIntBetween = (min: number, max: number): number => min + Math.floor((max - min) * Math.random());
 
-const measure = {
-    storage: {},
-    start(name: string) {
-        this.storage[name] = new Date().getTime();
-    },
-    end(name: string) {
-        console.log(name, new Date().getTime() - this.storage[name]);
-    }
-};
-
 export class Particle {
     opacity = Math.random() / 5;
     smokeSize = 5;
@@ -110,7 +100,6 @@ const createSmokeParticle = ({color: {red, green, blue, opacity}}) => {
 };
 
 const drawDustCloud = ({steps, x, y, width, height, context}: {steps: number, x: number, y: number, width: number, height: number, context: CanvasRenderingContext2D}) => {
-    measure.start('drawDustCloud');
     const smokeSize = Math.round(Math.max(width, height) / 5);
     const colors = [randomIntBetween(0, 255), randomIntBetween(0, 255)];
     colors.push(Math.max(0, Math.max(255, 512 - colors[0] - colors[1])));
@@ -136,11 +125,9 @@ const drawDustCloud = ({steps, x, y, width, height, context}: {steps: number, x:
         }
     }
     context.restore();
-    measure.end('drawDustCloud');
 };
 
 export const createBackgroundPattern = () => {
-    measure.start('createBackgroundPattern');
     const patternSize = 1000; // Math.max(screen.width, screen.height);
     const patternScale = Math.max(screen.width, screen.height) / patternSize;
     const maxScreens = 10;
@@ -187,10 +174,9 @@ export const createBackgroundPattern = () => {
         filledScreens++;
     };
 
-    const getBackground = () => new Promise(resolve => {
-        measure.start('getBackground');
+    const getBackground = () => {
         const getHeight = () => filledScreens * patternSize * patternScale;
-        resolve({
+        const background = {
             getHeight,
             canvas: patternCanvas, // backgroundCanvas,
             draw: (context: CanvasRenderingContext2D, yOffset: number) => {
@@ -199,11 +185,10 @@ export const createBackgroundPattern = () => {
                 context.drawImage(patternCanvas, 0, realOffset);
                 patternCanvas
             }
-        });
-        measure.end('getBackground');
-    });
+        };
+        return background;
+    };
 
-    measure.end('createBackgroundPattern');
     return {
         increment,
         getBackground

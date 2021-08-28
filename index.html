@@ -140,6 +140,7 @@
             }
 
             [data-touch-key] {
+                z-index: 2;
                 user-select: none;
                 display: none;
                 position: fixed;
@@ -148,6 +149,10 @@
                 bottom: 10px;
                 background: rgba(255, 255, 255, 0.5);
                 border-radius: 10px;
+                justify-content: center;
+                align-items: center;
+                font-size: 30px;
+                line-height: 30px;
             }
 
             [data-touch-key="arrowUp"] {
@@ -162,12 +167,8 @@
                 right: 10px;
             }
 
-            .touch [data-touch-key] {
+            .playing.touch [data-touch-key] {
                 display: flex;
-                justify-content: center;
-                align-items: center;
-                font-size: 30px;
-                line-height: 30px;
             }
 
             [data-touch-key].is-active {
@@ -178,9 +179,6 @@
     <body>
         <div id="game">
             <canvas id="game-canvas"></canvas>
-            <div data-touch-key="arrowUp">↑</div>
-            <div data-touch-key="arrowLeft">←</div>
-            <div data-touch-key="arrowRight">→</div>
         </div>
 
         <div id="menu">
@@ -202,5 +200,9 @@
         </div>
 
         <div id="fade-transition" class="visible"></div>
+
+        <div data-touch-key="arrowUp">↑</div>
+        <div data-touch-key="arrowLeft">←</div>
+        <div data-touch-key="arrowRight">→</div>
     </body>
 </html>

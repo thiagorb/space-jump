@@ -1,6 +1,6 @@
 import { soundPlayer } from "./Audio";
 import { memoizedBackgroundPattern } from "./Background";
-import { WORLD_SIZE, GRAVITY, TERMINAL_VELOCITY, STEPS_PER_MILISECOND, SPEED_UNIT, STEPS_PER_SECOND, URL_RADIUS, scene as scene, canvas, context, keyboard, JUMP_SPEED, ACCELERATION_UNIT, menu } from "./Globals";
+import { WORLD_SIZE, GRAVITY, TERMINAL_VELOCITY, STEPS_PER_MILISECOND, SPEED_UNIT, scene as scene, context, keyboard, JUMP_SPEED, ACCELERATION_UNIT } from "./Globals";
 import { between, sign } from "./Helpers";
 import { LocalStorage } from "./LocalStorage";
 import { activateMenu, fadeInTransition, fadeOutTransition, waitNextFrame } from "./Main";
@@ -257,7 +257,7 @@ export class Player extends GameObject {
         context.beginPath();
         context.bezierCurveTo(0.35 * this.direction, -0.7, 0.34 * this.direction, -0.75, 0.26 * this.direction, -0.82);
         context.moveTo(0.4 * this.direction, -0.6);
-        context.lineTo(0.4 * this.direction, -0.6);
+        context.lineTo(0.4 * this.direction, -0.61);
         context.stroke();
 
         context.restore();
@@ -771,8 +771,9 @@ const render = (state: GameState) => {
     */
 };
 
-export const start = async () => {
-    const game = await createGame();
+export const start = () => {
+    document.body.classList.add('playing');
+    const game = createGame();
 
     requestAnimationFrame((currentTime: number) => {
         const startDelay = 1000;
@@ -781,8 +782,8 @@ export const start = async () => {
     });
 };
 
-export const createGame = async () => {
-    const background = await (memoizedBackgroundPattern().getBackground());
+export const createGame = () => {
+    const background = memoizedBackgroundPattern().getBackground();
 
     let gameTimeGap = 0;
     let currentStep: number = 0;
@@ -805,6 +806,7 @@ export const createGame = async () => {
         state.updateScore();
 
         if (!state.ending && state.player.top > state.screenArea.bottom) {
+            document.body.classList.remove('playing');
             state.ending = true;
             soundPlayer.playGameOver();
             LocalStorage.update(storage => storage.highScore = Math.max(storage.highScore, state.score));

@@ -7,12 +7,12 @@ export const JUMP_SPEED = 1200 * SPEED_UNIT;
 export const TERMINAL_VELOCITY = 1000 * SPEED_UNIT;
 export const WORLD_SIZE = 1000;
 export const URL_RADIUS = WORLD_SIZE / 50;
-export const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas');
-export const menu = document.querySelector<HTMLDivElement>('#menu');
 export const scene = {
     scale: 1
 };
-export const context = canvas.getContext('2d');
+export let context: CanvasRenderingContext2D;
+
+export const setContext = (c: CanvasRenderingContext2D) => context = c;
 
 export const keyboard = {
     arrowUp: false,

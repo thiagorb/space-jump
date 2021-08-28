@@ -1,7 +1,7 @@
 import { soundPlayer } from "./Audio";
 import { memoizedBackgroundPattern } from "./Background";
 import { start as gameStart } from "./Game";
-import { context, keyboard, keyboardMap, menu, scene, WORLD_SIZE } from "./Globals";
+import { context, keyboard, keyboardMap, scene, setContext, WORLD_SIZE } from "./Globals";
 import { LocalStorage } from "./LocalStorage";
 
 const resize = () => {
@@ -79,13 +79,13 @@ export const activateMenu = async () => {
     };
 
     menuActive = true;
-    menu.style.display = null;
+    document.querySelector<HTMLDivElement>('#menu').style.display = null;
     window.requestAnimationFrame(renderBackground);
 };
 
 const deactivateMenu = () => {
     menuActive = false;
-    menu.style.display = 'none';
+    document.querySelector<HTMLDivElement>('#menu').style.display = 'none';
 };
 
 const updateAudioText = () => {
@@ -119,9 +119,9 @@ const waitForConsistentAnimation = async () => {
     } while (--maxTries > 0 && sequence < 5);
 };
 
-const fadeTransition = document.querySelector<HTMLDivElement>('#fade-transition');
 let nextFadeId = 0;
 export const fadeInTransition = async (ms: number = 500) => {
+    const fadeTransition = document.querySelector<HTMLDivElement>('#fade-transition');
     const fadeId = ++nextFadeId;
     await waitForConsistentAnimation();
     fadeTransition.style.transition = `opacity ${ms}ms`;
@@ -134,6 +134,7 @@ export const fadeInTransition = async (ms: number = 500) => {
 };
 
 export const fadeOutTransition = async (ms: number = 500) => {
+    const fadeTransition = document.querySelector<HTMLDivElement>('#fade-transition');
     const fadeId = ++nextFadeId;
     fadeTransition.style.transition = `opacity ${ms}ms`;
     fadeTransition.classList.add('visible');
@@ -253,12 +254,12 @@ document.addEventListener('DOMContentLoaded', () => {
 if (isTouchDevice()) {
     document.body.classList.add('touch');
 
-    const setActive = callback => event => {
+    const setActive = (callback: (event: TouchEvent) => void) => (event: TouchEvent) => {
         (event.target as HTMLDivElement).classList.add('is-active');
         callback(event);
     };
 
-    const unsetActive = callback => event => {
+    const unsetActive = (callback: (event: TouchEvent) => void) => (event: TouchEvent) => {
         (event.target as HTMLDivElement).classList.remove('is-active');
         callback(event);
     };
@@ -277,3 +278,6 @@ if (isTouchDevice()) {
     document.addEventListener('touchstart', setActive(filterTouch(flagKey)));
     document.addEventListener('touchend', unsetActive(filterTouch(unflagKey)));
 }
+
+const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas');
+setContext(canvas.getContext('2d'));
