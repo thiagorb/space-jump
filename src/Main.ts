@@ -249,9 +249,9 @@ const stampCircle = (context: CanvasRenderingContext2D, stamp: HTMLCanvasElement
 let logo: HTMLCanvasElement;
 const drawLogo = () => {
     logo = document.querySelector<HTMLCanvasElement>('#logo');
-    const ratio = 0.15;
-    logo.width = screen.width * 0.4;
-    logo.height = screen.width * ratio;
+    const ratio = 0.37;
+    logo.width = screen.width * 0.8;
+    logo.height = logo.width * ratio;
     const context = logo.getContext('2d');
     const scale = logo.width;
 

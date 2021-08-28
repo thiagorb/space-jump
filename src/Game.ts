@@ -402,7 +402,7 @@ abstract class Platform extends InteractiveObject {
     }
 
     preTick(state: GameState) {
-        if (state.player.speed.y >= 0 && this.isPlayerOn(state.player)) {
+        if (!keyboard.arrowDown && state.player.speed.y >= 0 && this.isPlayerOn(state.player)) {
             state.onPlatform = this;
             state.player.position.y = this.top - state.player.height;
         }
@@ -808,7 +808,7 @@ export const createGame = ({rockets = false}) => {
             state.tick();
         }
 
-        if (!state.ending && state.player.top > state.screenArea.bottom) {
+        if (!state.ending && state.player.top > state.screenArea.bottom && state.player.speed.y >= state.screenArea.speed) {
             game.end();
         }
         //fpsCounter++;

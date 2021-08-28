@@ -1,8 +1,7 @@
-add music
-add alternative controls for mobile
-add key to fall from platforms
 add outline to rocket?
 add small rotation animation to rocket
+add music
+add alternative controls for mobile
 add enemy (alien)?
 add collectible items (that give extra score)
 add reflection to helmet
