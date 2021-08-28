@@ -17,14 +17,19 @@ export const setContext = (c: CanvasRenderingContext2D) => context = c;
 export const keyboard = {
     arrowUp: false,
     arrowLeft: false,
+    arrowDown: false,
     arrowRight: false,
+    enter: false,
 };
 
 export const keyboardMap: Map<string, keyof typeof keyboard> = new Map([
     ['ArrowUp', 'arrowUp'],
     ['ArrowLeft', 'arrowLeft'],
+    ['ArrowDown', 'arrowDown'],
     ['ArrowRight', 'arrowRight'],
     ['KeyW', 'arrowUp'],
     ['KeyA', 'arrowLeft'],
+    ['KeyS', 'arrowDown'],
     ['KeyD', 'arrowRight'],
+    ['Enter', 'enter'],
 ]);

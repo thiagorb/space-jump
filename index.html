@@ -35,6 +35,10 @@
                 background-color: #000;
             }
 
+            .playing {
+                cursor: none;
+            }
+
             .button {
                 overflow: visible;
                 position: relative;
@@ -47,24 +51,24 @@
                 padding: 0.6em 1.2em;
                 background: #528;
                 border-radius: 100vmax;
+                transition: transform 0.8s, box-shadow 0.8s, background-color 0.3s;
+            }
+
+            .button.active:after {
+                transform: translateY(-1vmin);
+                filter: brightness(1.3);
+                box-shadow: 0 4px 10px rgba(255, 255, 255, 0.2);
             }
 
             .outline-text:after {
                 color: white;
                 font-weight: 900;
                 content: attr(data-text);
-                transition: transform 0.8s, box-shadow 0.3s, background-color 0.3s;
                 text-shadow:
                     -0.25vmin -0.25vmin 0 #000,
                     0.25vmin -0.25vmin 0 #000,
                     -0.25vmin 0.25vmin 0 #000,
                     0.25vmin 0.25vmin 0 #000;
-            }
-
-            .button:hover:after {
-                box-shadow: 0 0.25vmin 0.9vmin 0 rgba(0,0,0,.2), 0 0.25vmin 0.25vmin 0 rgba(0,0,0,.14), 0 0.6vmin 0.25vmin -0.25vmin rgba(0,0,0,.12);
-                transform: translateY(-1vmin);
-                filter: brightness(1.3);
             }
 
             .text-right {
@@ -74,7 +78,6 @@
             #game {
                 width: 100vw;
                 height: 100vh;
-                cursor: none;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;

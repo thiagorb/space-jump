@@ -43,7 +43,7 @@ class SoundPlayer {
     playRocket = this.throttle(1000, 'rocket');
     playJump = this.throttle(500, 'jump');
     playIce = this.throttle(700, 'ice');
-    playMouseOver = this.throttle(100, 'mouseOver');
+    playMouseOver = this.throttle(50, 'mouseOver');
     playGameStart = this.throttle(1000, 'gameStart');
     playGameOver = this.throttle(1000, 'gameOver');
     playClick = this.throttle(100, 'click');

@@ -46,8 +46,52 @@ const initializeMonetization = () => {
 };
 initializeMonetization();
 
+const getNextButton = (direction: 1 | -1) => {
+    if (!activeScreen) {
+        return undefined;
+    }
+
+    const allButtons = activeScreen.querySelectorAll<HTMLDivElement>('.button');
+    let i: number;
+    for (i = 0; i < allButtons.length; i++) {
+        if (allButtons[i].classList.contains('active')) {
+            return allButtons[(allButtons.length + i + direction) % allButtons.length];
+        }
+    }
+
+    return undefined;
+};
+
+const getActiveButton = () => activeScreen && activeScreen.querySelector<HTMLDivElement>('.active');
+
+const setActiveButton = (button: HTMLDivElement) => {
+    const active = getActiveButton();
+    if (active) {
+        active.classList.remove('active');
+    }
+    button.classList.add('active');
+    soundPlayer.playMouseOver();
+}
+
 document.addEventListener('keydown', (e: KeyboardEvent) => {
     const key = keyboardMap.get(e.code);
+    if (key === 'arrowDown' || key === 'arrowRight') {
+        const nextButton = getNextButton(1);
+        if (nextButton) {
+            setActiveButton(nextButton);
+        }
+    } else if (key === 'arrowLeft' || key === 'arrowUp') {
+        const nextButton = getNextButton(-1);
+        if (nextButton) {
+            setActiveButton(nextButton);
+        }
+    } else if (key === 'enter') {
+        const activeButton = getActiveButton();
+        if (activeButton) {
+            activeButton.click();
+        }
+    }
+
     if (key) {
         keyboard[key] = true;
     }
@@ -79,12 +123,16 @@ export const activateMenu = async () => {
     };
 
     menuActive = true;
-    document.querySelector<HTMLDivElement>('#menu').style.display = null;
+    const menu = document.querySelector<HTMLDivElement>('#menu');
+    menu.style.display = null;
+    activeScreen = menu;
+    setActiveButton(document.querySelector('#start'));
     window.requestAnimationFrame(renderBackground);
 };
 
 const deactivateMenu = () => {
     menuActive = false;
+    activeScreen = null;
     document.querySelector<HTMLDivElement>('#menu').style.display = 'none';
 };
 
@@ -142,6 +190,7 @@ export const fadeOutTransition = async (ms: number = 500) => {
     await wait(ms);
 };
 
+let activeScreen: HTMLDivElement = null;
 document.addEventListener('DOMContentLoaded', () => {
     const body: any = document.body;
 
@@ -179,6 +228,8 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelector('#fullscreen-question').remove();
             goToAudio();
         } else {
+            activeScreen = document.querySelector('#fullscreen-question');
+            setActiveButton(document.querySelector('#fullscreen--yes'));
             fadeInTransition();
         }
     };
@@ -188,6 +239,8 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelector('#audio-question').remove();
             goToMenu();
         } else {
+            activeScreen = document.querySelector('#audio-question');
+            setActiveButton(document.querySelector('#audio--yes'));
             fadeInTransition();
         }
     };
@@ -235,9 +288,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.body.addEventListener('mouseover', (event: MouseEvent) => {
-        const element = <Element>event.target;
+        const element = <HTMLDivElement>event.target;
         if (element.matches('.button')) {
-            soundPlayer.playMouseOver();
+            setActiveButton(element);
         }
     });
 
