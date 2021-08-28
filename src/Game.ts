@@ -771,17 +771,6 @@ const render = (state: GameState) => {
     */
 };
 
-export const start = () => {
-    document.body.classList.add('playing');
-    const game = createGame();
-
-    requestAnimationFrame((currentTime: number) => {
-        const startDelay = 1000;
-        game.initialize(currentTime + startDelay);
-        window.requestAnimationFrame(game.loop);
-    });
-};
-
 export const createGame = () => {
     const background = memoizedBackgroundPattern().getBackground();
 
@@ -806,16 +795,7 @@ export const createGame = () => {
         state.updateScore();
 
         if (!state.ending && state.player.top > state.screenArea.bottom) {
-            document.body.classList.remove('playing');
-            state.ending = true;
-            soundPlayer.playGameOver();
-            LocalStorage.update(storage => storage.highScore = Math.max(storage.highScore, state.score));
-            fadeOutTransition(3000).then(async () => {
-                state.over = true;
-                await waitNextFrame();
-                activateMenu();
-                fadeInTransition(300);
-            });
+            game.end();
         }
 
         background.draw(context, state.backgroundY);
@@ -834,10 +814,10 @@ export const createGame = () => {
     };
 
     const game = {
-        initialize: (currentTime: number) => {
+        start: () => {
+            document.body.classList.add('playing');
             soundPlayer.playGameStart();
-            state.previousTime = currentTime;
-            render(state);
+            game.resumeLoop();
         },
 
         animate,
@@ -853,10 +833,29 @@ export const createGame = () => {
         },
 
         resumeLoop: () => {
+            document.body.classList.add('playing');
             game.state.paused = false;
             window.requestAnimationFrame((currentTime: number) => {
                 state.previousTime = currentTime;
                 game.loop(currentTime);
+            });
+        },
+
+        pause: () => {
+            document.body.classList.remove('playing');
+            state.paused = true;
+        },
+
+        end: () => {
+            document.body.classList.remove('playing');
+            state.ending = true;
+            soundPlayer.playGameOver();
+            LocalStorage.update(storage => storage.highScore = Math.max(storage.highScore, state.score));
+            fadeOutTransition(3000).then(async () => {
+                state.over = true;
+                await waitNextFrame();
+                activateMenu();
+                fadeInTransition(300);
             });
         },
     };

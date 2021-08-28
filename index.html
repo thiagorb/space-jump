@@ -33,6 +33,7 @@
                 color: #444;
                 font-size: 3vmin;
                 background-color: #000;
+                cursor: none;
             }
 
             .button {
@@ -109,6 +110,7 @@
                 grid-column-start: 1;
                 grid-column-end: 3;
                 grid-row: 1;
+                text-align: center;
                 text-shadow: 0 0 1px #fff;
             }
 
@@ -131,6 +133,17 @@
                 height: 100vh;
                 transform-origin: 0 0;
                 background: #000;
+            }
+
+            #pause {
+                opacity: 0;
+                transition: opacity 0.3s;
+                background: rgba(0, 0, 0, 0.2);
+                z-index: -1;
+            }
+
+            #pause.visible {
+                opacity: 1;
             }
 
             .subscriber-only {
@@ -165,6 +178,16 @@
                 right: 10px;
             }
 
+            [data-touch-key="escape"] {
+                width: 40px;
+                height: 40px;
+                background: none;
+                color: white;
+
+                right: 10px;
+                top: 10px;
+            }
+
             .playing.touch [data-touch-key] {
                 display: flex;
             }
@@ -177,6 +200,12 @@
     <body>
         <div id="game">
             <canvas id="game-canvas"></canvas>
+        </div>
+
+        <div id="pause" class="question">
+            <div class="question--text outline-text" data-text="GAME PAUSED"></div>
+            <div id="pause--continue" class="question--yes button outline-text" data-text="CONTINUE"></div>
+            <div id="pause--abort" class="question--no button outline-text" data-text="ABORT"></div>
         </div>
 
         <div id="menu">
@@ -202,5 +231,6 @@
         <div data-touch-key="arrowUp">↑</div>
         <div data-touch-key="arrowLeft">←</div>
         <div data-touch-key="arrowRight">→</div>
+        <div data-touch-key="escape">×</div>
     </body>
 </html>

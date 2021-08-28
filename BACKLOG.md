@@ -1,5 +1,3 @@
-fix cursor not disappearing after starting game
-add option to pause
 add monetization
 add alternative controls for mobile
 custom font

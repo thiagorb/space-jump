@@ -1,6 +1,6 @@
 import { soundPlayer } from "./Audio";
 import { memoizedBackgroundPattern } from "./Background";
-import { start as gameStart } from "./Game";
+import { createGame } from "./Game";
 import { context, keyboard, keyboardMap, scene, setContext, WORLD_SIZE } from "./Globals";
 import { LocalStorage } from "./LocalStorage";
 
@@ -65,6 +65,10 @@ const getNextButton = (direction: 1 | -1) => {
 const getActiveButton = () => activeScreen && activeScreen.querySelector<HTMLDivElement>('.active');
 
 const setActiveButton = (button: HTMLDivElement) => {
+    if (!activeScreen) {
+        return;
+    }
+
     const active = getActiveButton();
     if (active) {
         active.classList.remove('active');
@@ -90,6 +94,8 @@ document.addEventListener('keydown', (e: KeyboardEvent) => {
         if (activeButton) {
             activeButton.click();
         }
+    } else if (key === 'escape') {
+        togglePause();
     }
 
     if (key) {
@@ -210,17 +216,21 @@ const initializeCursor = () => {
     context.closePath();
     context.fill();
     context.stroke();
+    const cursorStyle = document.createElement('style');
+    cursorStyle.textContent = `.cursor{cursor:url('${cursor.toDataURL()}'),auto}`;
+    document.body.append(cursorStyle);
 };
 
 const enableCursor = () => {
-    document.body.style.cursor = `url('${cursor.toDataURL()}'), auto`;
+    document.body.classList.add('cursor');
 };
 
 const disableCursor = () => {
-    document.body.style.cursor = 'none';
+    document.body.classList.remove('cursor');
 };
 
 let activeScreen: HTMLDivElement = null;
+let activeGame: ReturnType<typeof createGame> = null;
 document.addEventListener('DOMContentLoaded', () => {
     const body: any = document.body;
 
@@ -249,7 +259,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('#start').addEventListener('click', async () => {
         deactivateMenu();
         await fadeOutTransition();
-        gameStart();
+        activeGame = createGame();
+        activeGame.start();
         await fadeInTransition(5000);
     });
 
@@ -331,11 +342,60 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    document.querySelector<HTMLDivElement>('#pause--continue').addEventListener('click', () => {
+        unpause();
+    });
+
+    document.querySelector<HTMLDivElement>('#pause--abort').addEventListener('click', async () => {
+        await unpause();
+        activeGame.end();
+    });
+
     initializeCursor();
     enableCursor();
 
     goToFullscreen();
 });
+
+const pause = () => {
+    if (!activeGame || activeGame.state.paused) {
+        return;
+    }
+
+    activeGame.pause();
+    const pauseScreen = document.querySelector<HTMLDivElement>('#pause');
+    activeScreen = pauseScreen;
+    setActiveButton(document.querySelector<HTMLDivElement>('#pause--continue'));
+    pauseScreen.classList.add('visible');
+    pauseScreen.style.zIndex = '2';
+    enableCursor();
+};
+
+const unpause = async () => {
+    const pauseScreen = document.querySelector<HTMLDivElement>('#pause');
+    if (!activeGame || !activeGame.state.paused || activeScreen !== pauseScreen) {
+        return;
+    }
+
+    activeScreen = null;
+    pauseScreen.classList.remove('visible');
+    disableCursor();
+    await wait(300);
+    pauseScreen.style.zIndex = null;
+    activeGame.resumeLoop();
+};
+
+const togglePause = () => {
+    if (!activeGame) {
+        return;
+    }
+
+    if (activeGame.state.paused) {
+        unpause();
+    } else {
+        pause();
+    }
+};
 
 if (isTouchDevice()) {
     document.body.classList.add('touch');
@@ -358,7 +418,13 @@ if (isTouchDevice()) {
         }
     };
 
-    const flagKey = (key: string) => keyboard[key] = true;
+    const flagKey = (key: string) => {
+        keyboard[key] = true;
+
+        if (key === 'escape') {
+            togglePause();
+        }
+    };
     const unflagKey = (key: string) => keyboard[key] = false;
 
     document.addEventListener('touchstart', setActive(filterTouch(flagKey)));
