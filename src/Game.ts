@@ -315,7 +315,7 @@ export class Player extends GameObject {
             if (state.player.speed.y > 0) {
                 state.player.animation = state.player.fallingAnimation;
             } else if (state.player.animation !== state.player.jumpAnimation) {
-                if (state.player.speed.y < -JUMP_SPEED) {
+                if (state.player.rocket) {
                     state.player.animation = state.player.risingAnimation;
                 } else {
                     state.player.animation = state.player.restAnimation;
