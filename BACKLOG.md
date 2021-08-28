@@ -1,7 +1,7 @@
-add alternative controls for mobile
 custom font
 logo with name + character
 add music
+add alternative controls for mobile
 add key to fall from platforms
 add outline to rocket?
 add small rotation animation to rocket

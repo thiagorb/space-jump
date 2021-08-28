@@ -106,8 +106,8 @@ export class Player extends GameObject {
     };
 
     animationSpeed = {
-        legsRotation: 50 * SPEED_UNIT,
-        armsRotation: 50 * SPEED_UNIT,
+        legsRotation: 0.12,
+        armsRotation: 0.12,
     };
 
     restAnimation = [
@@ -275,7 +275,7 @@ export class Player extends GameObject {
     }
 
     isOn(platform: Platform): boolean {
-        return Math.abs(this.bottom - platform.top) < 1 && this.right > platform.left && this.left < platform.right;
+        return Math.abs(this.bottom - platform.top) < 5 && this.right > platform.left && this.left < platform.right;
     }
 
     tick(state: GameState) {
@@ -408,6 +408,7 @@ abstract class Platform extends InteractiveObject {
     preTick(state: GameState) {
         if (state.player.speed.y >= 0 && state.player.isOn(this)) {
             state.onPlatform = this;
+            state.player.position.y = this.top - state.player.height;
         }
     }
 }
@@ -791,10 +792,6 @@ export const createGame = ({rockets = false}) => {
     const animate = (currentTime: number) => {
         state.updateScore();
 
-        if (!state.ending && state.player.top > state.screenArea.bottom) {
-            game.end();
-        }
-
         background.draw(context, state.backgroundY);
         render(state);
 
@@ -806,6 +803,10 @@ export const createGame = ({rockets = false}) => {
         const targetStep = currentStep + stepsTorun;
         for (; currentStep < targetStep; currentStep++) {
             state.tick();
+        }
+
+        if (!state.ending && state.player.top > state.screenArea.bottom) {
+            game.end();
         }
         //fpsCounter++;
     };
