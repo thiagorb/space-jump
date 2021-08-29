@@ -22,22 +22,25 @@ class SoundPlayer {
                 return;
             }
 
+            this.buildSamples();
             previous = setTimeout(clearPrevious, ms);
             this.getZzfx().playSamples(this.samples[sound]);
         };
     }
 
     getZzfx() {
-        const zzfx = require('zzfx').ZZFX;
+        return require('zzfx').ZZFX;
+    }
 
-        if (!this.samples) {
-            this.samples = {};
-            for (const sound in this.sounds) {
-                this.samples[sound] = zzfx.buildSamples(...this.sounds[sound]);
-            }
+    buildSamples() {
+        if (this.samples) {
+            return;
         }
 
-        return zzfx;
+        this.samples = {};
+        for (const sound in this.sounds) {
+            this.samples[sound] = this.getZzfx().buildSamples(...this.sounds[sound]);
+        }
     }
 
     playRocket = this.throttle(1000, 'rocket');

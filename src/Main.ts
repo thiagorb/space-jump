@@ -6,8 +6,10 @@ import { LocalStorage } from "./LocalStorage";
 
 const resize = () => {
     const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')
-    canvas.width = canvas.clientWidth;
-    canvas.height = canvas.clientHeight;
+    canvas.width = document.body.clientWidth;
+    canvas.height = document.body.clientHeight;
+    const vMin = Math.min(document.body.clientWidth, document.body.clientHeight) / 100;
+    document.documentElement.style.fontSize = `${vMin}px`;
 
     scene.scale = Math.min(window.innerWidth / WORLD_SIZE, window.innerHeight / WORLD_SIZE);
 };
@@ -116,7 +118,6 @@ let menuActive = false;
 export const activateMenu = async () => {
     const background = await memoizedBackgroundPattern().getBackground();
     const player = new Player();
-    player.animation = player.fallingAnimation;
 
     let backgroundY = background.getHeight() * Math.random();
     let previousTime = null;
@@ -167,7 +168,7 @@ const setAudioActive = (value: boolean) => {
     updateAudioText();
 
     if (value) {
-        soundPlayer.playClick();
+        soundPlayer.buildSamples();
     }
 }
 
@@ -249,7 +250,7 @@ const stampCircle = (context: CanvasRenderingContext2D, stamp: HTMLCanvasElement
 let logo: HTMLCanvasElement;
 const drawLogo = () => {
     logo = document.querySelector<HTMLCanvasElement>('#logo');
-    const ratio = 0.37;
+    const ratio = 0.4;
     logo.width = Math.max(screen.height, screen.width) * 0.4;
     logo.height = logo.width * ratio;
     const context = logo.getContext('2d');
@@ -410,8 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.querySelector('#audio--yes').addEventListener('click', () => {
-        setAudioActive(true);
-        closeAudio();
+        closeAudio().then(() => setAudioActive(true));
     });
 
     document.body.addEventListener('mouseover', (event: MouseEvent) => {

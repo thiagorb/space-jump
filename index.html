@@ -23,15 +23,20 @@
                 margin: 0.5em 0;
             }
 
+            html {
+                height: -webkit-fill-available;
+            }
+
             body {
                 margin: 0;
                 padding: 0;
                 position: fixed;
                 width: 100%;
                 height: 100%;
+                height: -webkit-fill-available;
                 font-family: sans-serif;
                 color: #444;
-                font-size: 3vmin;
+                font-size: 3rem;
                 background-color: #000;
                 cursor: none;
             }
@@ -51,7 +56,7 @@
             }
 
             .button.active:after {
-                transform: translateY(-1vmin);
+                transform: translateY(-1rem);
                 filter: brightness(1.3);
                 box-shadow: 0 4px 10px rgba(255, 255, 255, 0.2);
             }
@@ -61,10 +66,10 @@
                 font-weight: 900;
                 content: attr(data-text);
                 text-shadow:
-                    -0.25vmin -0.25vmin 0 #000,
-                    0.25vmin -0.25vmin 0 #000,
-                    -0.25vmin 0.25vmin 0 #000,
-                    0.25vmin 0.25vmin 0 #000;
+                    -0.25rem -0.25rem 0 #000,
+                    0.25rem -0.25rem 0 #000,
+                    -0.25rem 0.25rem 0 #000,
+                    0.25rem 0.25rem 0 #000;
             }
 
             .text-right {
@@ -72,31 +77,40 @@
             }
 
             #logo {
-                width: 80vmin;
-                height: 30vmin;
-                margin: 0 -25vmin;
+                width: 80rem;
+                height: 30rem;
+                margin: 0 -25rem 0rem;
             }
 
             #game {
+                position: absolute;
+                top: 0;
+                left: 0;
+                bottom: 0;
                 width: 100vw;
-                height: 100vh;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
-                background-color: black;
+                background-color: blue;
             }
 
             #menu, .question, #fade-transition {
                 width: 100vw;
-                height: 100vh;
+                height: 100%;
                 display: grid;
-                gap: 3vmin;
+                gap: 3rem;
                 justify-content: center;
-                align-items: center;
                 align-content: center;
                 position: absolute;
                 left: 0;
                 top: 0;
+            }
+
+            #menu {
+                height: 72rem;
+                align-content: start;
+                top: 50%;
+                transform: translateY(-50%);
             }
 
             .question {
@@ -137,6 +151,7 @@
             #game-canvas {
                 width: 100vw;
                 height: 100vh;
+                height: -webkit-fill-available;
                 transform-origin: 0 0;
                 background: #000;
             }
