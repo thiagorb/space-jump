@@ -115,8 +115,10 @@ document.addEventListener('keyup', (e: KeyboardEvent) => {
 
 let menuActive = false;
 
-export const activateMenu = async () => {
-    const background = await memoizedBackgroundPattern().getBackground();
+export const activateMenu = () => {
+    const pattern = memoizedBackgroundPattern();
+    pattern.increment();
+    const background = pattern.getBackground();
     const player = new Player();
     player.position.x = 250;
     player.position.y = 400;
@@ -234,12 +236,11 @@ const initializeCursor = () => {
 
 const stampCircle = (context: CanvasRenderingContext2D, stamp: HTMLCanvasElement, textRadius: number, x: number, y: number) => {
     textRadius = textRadius;
-    for (let i = -textRadius; i <= textRadius; i++) {
-        const angle = Math.acos(i / textRadius);
-        const sin = Math.sin(angle) * textRadius;
-        for (let j = -sin; j <= sin; j++) {
-            context.drawImage(stamp, i + x, j + y);
-        }
+    const steps = Math.ceil(Math.PI * 2 * textRadius);
+    const angleStep = 2 * Math.PI / steps;
+    for (let i = 0; i < steps; i++) {
+        const angle = i * angleStep;
+        context.drawImage(stamp, x + textRadius * Math.cos(angle), y - textRadius * Math.sin(angle));
     }
 };
 
@@ -247,7 +248,7 @@ let logo: HTMLCanvasElement;
 const drawLogo = () => {
     logo = document.querySelector<HTMLCanvasElement>('#logo');
     const ratio = 0.4;
-    logo.width = Math.max(screen.height, screen.width) * 0.4;
+    logo.width = Math.min(screen.height, screen.width) * 0.8;
     logo.height = logo.width * ratio;
     const context = logo.getContext('2d');
     const scale = logo.width;
@@ -256,7 +257,7 @@ const drawLogo = () => {
     canvas2.width = logo.width;
     canvas2.height = logo.height;
     const context2 = canvas2.getContext('2d');
-    context2.font = `bolder ${0.27 * scale}px Arial`;
+    context2.font = `100 ${0.27 * scale}px Arial`;
     context2.textBaseline = 'top';
     context2.textAlign = 'center';
 
@@ -265,15 +266,15 @@ const drawLogo = () => {
     canvas3.height = logo.height;
     const context3 = canvas3.getContext('2d');
 
-    const finalI = Math.ceil(0.01 * scale) * 4;
-    for (let i = 0; i <= finalI; i += 4) {
+    const stepSize = 0.008 * scale;
+    const finalI = Math.ceil(5 * stepSize);
+    for (let i = 0; i <= finalI; i += stepSize) {
         const progress = i / finalI;
         context2.clearRect(0, 0, canvas2.width, canvas2.height);
         context3.clearRect(0, 0, canvas3.width, canvas3.height);
-        const quadratic = progress * progress;
-        context2.fillStyle = `hsla(${220}, 100%, ${50 + (quadratic * 50)}%, 1)`;
+        context2.fillStyle = `hsla(${220}, 100%, ${50 + (progress * progress * 50)}%, 1)`;
         context2.fillText('SPACE', 0.5 * scale, 0.01 * scale);
-        stampCircle(context3, canvas2, 1 + finalI - i, 0, (finalI - i) * 0.4);
+        stampCircle(context3, canvas2, 0.015 * scale + finalI - i, 0, (finalI - i) * 0.4);
         context.globalAlpha = 1;
         context.globalCompositeOperation = 'destination-out';
         context.drawImage(canvas3, 0, 0);
@@ -288,12 +289,12 @@ const drawLogo = () => {
     context2.rotate(-0.08);
     context2.fillStyle = '#000';
     context2.fillText('JUMP', 0.6 * scale, 0.23 * scale);
-    stampCircle(context, canvas2, 5, 0, 0);
+    stampCircle(context, canvas2, 0.02 * scale, 0, 0);
 
     context2.fillStyle = '#fff';
     context2.clearRect(0, 0, canvas2.width, canvas2.height);
     context2.fillText('JUMP', 0.6 * scale, 0.23 * scale);
-    context.drawImage(canvas2, 0, 0);
+    stampCircle(context, canvas2, 0.01 * scale, 0, 0);
 };
 
 const enableCursor = () => {
@@ -312,8 +313,6 @@ document.addEventListener('DOMContentLoaded', () => {
     resize();
 
     const goToMenu = () => {
-        const pattern = memoizedBackgroundPattern();
-        pattern.increment();
         activateMenu();
         updateAudioText();
         drawLogo();
