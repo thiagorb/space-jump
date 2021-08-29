@@ -9,7 +9,7 @@ class SoundPlayer {
         click: [1,0,800,,,0,,,,,,,,,,,,0,.01],
     }
 
-    samples = null;
+    samples = {};
 
     enabled: boolean = false;
 
@@ -22,9 +22,8 @@ class SoundPlayer {
                 return;
             }
 
-            this.buildSamples();
             previous = setTimeout(clearPrevious, ms);
-            this.getZzfx().playSamples(this.samples[sound]);
+            this.getZzfx().playSamples(this.buildSample(sound));
         };
     }
 
@@ -32,14 +31,13 @@ class SoundPlayer {
         return require('zzfx').ZZFX;
     }
 
-    buildSamples() {
-        if (this.samples) {
-            return;
-        }
+    buildSample(sound: string) {
+        return this.samples[sound] = this.samples[sound] || this.getZzfx().buildSamples(...this.sounds[sound]);
+    }
 
-        this.samples = {};
+    buildSamples() {
         for (const sound in this.sounds) {
-            this.samples[sound] = this.getZzfx().buildSamples(...this.sounds[sound]);
+            this.buildSample(sound);
         }
     }
 

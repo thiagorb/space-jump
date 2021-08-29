@@ -118,6 +118,8 @@ let menuActive = false;
 export const activateMenu = async () => {
     const background = await memoizedBackgroundPattern().getBackground();
     const player = new Player();
+    player.position.x = 250;
+    player.position.y = 400;
 
     let backgroundY = background.getHeight() * Math.random();
     let previousTime = null;
@@ -128,8 +130,6 @@ export const activateMenu = async () => {
         context.translate(window.innerWidth / 2, window.innerHeight / 2);
         context.scale(scene.scale, scene.scale);
         context.translate(-WORLD_SIZE / 2, -WORLD_SIZE / 2);
-        player.position.x = 230;
-        player.position.y = 450;
 
         player.render(context);
         context.restore();
@@ -166,10 +166,6 @@ const updateAudioText = () => {
 const setAudioActive = (value: boolean) => {
     LocalStorage.update(storage => storage.audio = soundPlayer.enabled = value);
     updateAudioText();
-
-    if (value) {
-        soundPlayer.buildSamples();
-    }
 }
 
 export const waitNextFrame = () => new Promise(window.requestAnimationFrame);
@@ -339,6 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const startGame = async (params = {}) => {
         deactivateMenu();
         await fadeOutTransition();
+        soundPlayer.buildSamples();
         activeGame = createGame(params);
         activeGame.start();
         await fadeInTransition(5000);
@@ -411,7 +408,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.querySelector('#audio--yes').addEventListener('click', () => {
-        closeAudio().then(() => setAudioActive(true));
+        setAudioActive(true);
+        closeAudio();
     });
 
     document.body.addEventListener('mouseover', (event: MouseEvent) => {
