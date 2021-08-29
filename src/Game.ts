@@ -688,8 +688,10 @@ class GameState {
             object.preTick(this);
         }
 
-        if (this.onPlatform && this.onPlatform !== this.ignorePlatform) {
-            this.ignorePlatform = null;
+        if (this.ignorePlatform) {
+            if ((this.onPlatform && this.onPlatform !== this.ignorePlatform) || this.player.speed.y < 0) {
+                this.ignorePlatform = null;
+            }
         }
 
         if (this.screenArea.top - WORLD_SIZE < this.nextPlatformTop) {
