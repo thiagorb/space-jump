@@ -402,7 +402,7 @@ class Rocket extends InteractiveObject {
             state.player.rocket = true;
 
             const deltaY = 1 - (state.player.top - state.screenArea.top) / WORLD_SIZE;
-            state.screenArea.speedBoost = -1.6 * deltaY * JUMP_SPEED - state.screenArea.speed;
+            state.screenArea.speedBoost = Math.min(0, -1.6 * deltaY * JUMP_SPEED - state.screenArea.speed);
         }
     }
 }

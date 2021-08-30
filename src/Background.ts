@@ -178,7 +178,7 @@ export const createBackgroundPattern = () => {
         const getHeight = () => filledScreens * patternSize * patternScale;
         const background = {
             getHeight,
-            canvas: patternCanvas, // backgroundCanvas,
+            canvas: patternCanvas,
             draw: (context: CanvasRenderingContext2D, yOffset: number) => {
                 const realOffset = yOffset % getHeight();
                 context.drawImage(patternCanvas, 0, realOffset - getHeight());
