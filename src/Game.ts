@@ -426,7 +426,7 @@ abstract class Platform extends InteractiveObject {
     }
 
     isPlayerOn(player: Player): boolean {
-        return Math.abs(player.bottom - this.top) < 5 && player.right > this.left && player.left < this.right;
+        return Math.abs(player.bottom - this.top) < 10 && player.right > this.left && player.left < this.right;
     }
 }
 
