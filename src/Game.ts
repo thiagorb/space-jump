@@ -81,14 +81,77 @@ const drawRoundShape = (context: CanvasRenderingContext2D, roundShape: RoundShap
     context.stroke();
 };
 
+const rocketParticles = () => {
+    const lifeTime = 20;
+    const maxParticles: number = 250;
+    const particles = [...new Array(maxParticles)].map(() => ({
+        speed: {
+            x: 0,
+            y: 0,
+        },
+        x: 0,
+        y: 0,
+        time: 0,
+    }));
+
+    const colors = [...new Array(lifeTime)].map((_, i) => {
+        const progress = i / lifeTime;
+        const yellow = 255 * Math.min(1, 1 - 2 * progress);
+        const decay = Math.max(0, Math.min(1, 1 - progress));
+        return `rgba(${255 * decay}, ${yellow * decay}, 0, ${0.3 * decay})`;
+    });
+
+    let aliveParticles = 0;
+
+    return {
+        add: (x: number, y: number) => {
+            for (let i = 0; i < 10; i++) {
+                aliveParticles = Math.min(aliveParticles + 1, particles.length - 1);
+                const particle = particles[aliveParticles - 1];
+                particle.speed.x = (0.5 - Math.random()) * 3;
+                particle.speed.y = 10 + i;
+                particle.x = x + (0.5 - Math.random()) * 10;
+                particle.y = y + 3 * i;
+                particle.time = 0;
+            }
+        },
+
+        render: (context: CanvasRenderingContext2D) => {
+            for (let i = 0; i < aliveParticles; i++) {
+                const particle = particles[i];
+                const progress = particle.time / lifeTime;
+                if (progress >= 1) {
+                    aliveParticles--;
+                    if (i !== aliveParticles) {
+                        const tmp = particles[i];
+                        particles[i] = particles[aliveParticles];
+                        particles[aliveParticles] = tmp;
+                    }
+
+                    continue;
+                }
+
+                context.fillStyle = colors[particle.time];
+                context.beginPath();
+                const radius = Math.round(25 * (1 - Math.abs(0.3 - progress)));
+                context.arc(particle.x, particle.y, radius, 0, 2 * Math.PI);
+                context.closePath();
+                context.fill();
+
+                particle.time++;
+                particle.x += particle.speed.x;
+                particle.y += particle.speed.y;
+            }
+        }
+    }
+};
+
 export class Player extends GameObject {
     speed: Vector2D = new Vector2D();
     width: number = 70;
     height: number = 150;
     direction: number = 1;
     rocket: boolean = false;
-
-    rocketParticles = new Set<any>();
 
     legGap = 0.25;
     armGap = 0.5;
@@ -99,6 +162,8 @@ export class Player extends GameObject {
     head = new RoundShape(0, -0.5, 0, -0.501, 1.0);
     leftArm = new RoundShape(-this.armGap * 0.8, -0.1, -this.armGap, 0.3, 0.4);
     rightArm = new RoundShape(this.armGap * 0.8, -0.1, this.armGap, 0.3, 0.4);
+
+    rocketParticles = rocketParticles();
 
     animationState = {
         legsRotation: -Math.PI / 2,
@@ -163,43 +228,14 @@ export class Player extends GameObject {
         context.save();
 
         if (this.rocket) {
-            for (let i = 0; i < 30; i++) {
-                this.rocketParticles.add({
-                    speed: {
-                        x: (0.5 - Math.random()) * 3,
-                        y: 10,
-                    },
-                    x: this.position.x + this.width / 2,
-                    y: i + this.position.y + this.height / 2,
-                    time: 0,
-                });
-            }
+            this.rocketParticles.add(this.position.x + this.width / 2, this.position.y + this.height / 2);
 
             if (this.speed.y >= 0) {
                 this.rocket = false;
             }
         }
 
-        const particleLifeTime = 20;
-        for (const particle of this.rocketParticles) {
-            const progress =particle.time / particleLifeTime;
-            context.lineWidth = 40 * (1 - Math.abs(0.3 - progress));
-            context.lineCap = 'round';
-            const yellow = 255 * Math.min(1, 1 - 2 * progress);
-            const decay = Math.max(0, Math.min(1, 1 - progress));
-            context.strokeStyle = `rgba(${255 * decay}, ${yellow * decay}, 0, ${0.1 * decay})`;
-            context.beginPath();
-            context.moveTo(particle.x, particle.y);
-            context.lineTo(particle.x, particle.y + 0.1);
-            context.stroke();
-
-            particle.time++;
-            particle.x += particle.speed.x;
-            particle.y += particle.speed.y;
-            if (progress >= 1) {
-                this.rocketParticles.delete(particle);
-            }
-        }
+        this.rocketParticles.render(context);
 
         this.updateAnimation();
         this.leftLeg.end.x = this.leftLeg.begin.x + 0.5 * Math.cos(this.animationState.legsRotation);
@@ -402,7 +438,7 @@ class Rocket extends InteractiveObject {
             state.player.rocket = true;
 
             const deltaY = 1 - (state.player.top - state.screenArea.top) / WORLD_SIZE;
-            state.screenArea.speedBoost = Math.min(0, -1.6 * deltaY * JUMP_SPEED - state.screenArea.speed);
+            state.screenArea.speedBoost = Math.min(0, -1.6 * deltaY * JUMP_SPEED    );
         }
     }
 }
