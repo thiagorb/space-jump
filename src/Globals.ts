@@ -20,7 +20,6 @@ export const keyboard = {
     arrowDown: false,
     arrowRight: false,
     enter: false,
-    escape: false,
 };
 
 export const keyboardMap: Map<string, keyof typeof keyboard> = new Map([
@@ -33,5 +32,4 @@ export const keyboardMap: Map<string, keyof typeof keyboard> = new Map([
     ['KeyS', 'arrowDown'],
     ['KeyD', 'arrowRight'],
     ['Enter', 'enter'],
-    ['Escape', 'escape'],
 ]);

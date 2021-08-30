@@ -96,9 +96,9 @@ document.addEventListener('keydown', (e: KeyboardEvent) => {
         const activeButton = getActiveButton();
         if (activeButton) {
             activeButton.click();
+        } else {
+            togglePause();
         }
-    } else if (key === 'escape') {
-        togglePause();
     }
 
     if (key) {
@@ -442,7 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 const pause = () => {
-    if (!activeGame || activeGame.state.paused) {
+    if (!activeGame || activeGame.state.paused || activeGame.state.ending) {
         return;
     }
 
@@ -505,7 +505,7 @@ if (isTouchDevice()) {
     const flagKey = (key: string) => {
         keyboard[key] = true;
 
-        if (key === 'escape') {
+        if (key === 'enter') {
             togglePause();
         }
     };
