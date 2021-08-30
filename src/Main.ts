@@ -248,7 +248,7 @@ let logo: HTMLCanvasElement;
 const drawLogo = () => {
     logo = document.querySelector<HTMLCanvasElement>('#logo');
     const ratio = 0.4;
-    logo.width = Math.min(screen.height, screen.width) * 0.8;
+    logo.width = Math.min(screen.height * window.devicePixelRatio, screen.width * window.devicePixelRatio) * 0.8;
     logo.height = logo.width * ratio;
     const context = logo.getContext('2d');
     const scale = logo.width;
@@ -286,15 +286,15 @@ const drawLogo = () => {
     context2.font = `bolder ${0.2 * scale}px Arial`;
     context2.clearRect(0, 0, canvas2.width, canvas2.height);
     context3.clearRect(0, 0, canvas3.width, canvas3.height);
-    context2.rotate(-0.08);
+    context.rotate(-0.08);
     context2.fillStyle = '#000';
-    context2.fillText('JUMP', 0.6 * scale, 0.23 * scale);
-    stampCircle(context, canvas2, 0.02 * scale, 0, 0);
+    context2.fillText('JUMP', 0.6 * scale, 0.2 * scale);
+    stampCircle(context, canvas2, 0.02 * scale, 0, 0.03 * scale);
 
     context2.fillStyle = '#fff';
     context2.clearRect(0, 0, canvas2.width, canvas2.height);
-    context2.fillText('JUMP', 0.6 * scale, 0.23 * scale);
-    stampCircle(context, canvas2, 0.01 * scale, 0, 0);
+    context2.fillText('JUMP', 0.6 * scale, 0.2 * scale);
+    stampCircle(context, canvas2, 0.01 * scale, 0, 0.03 * scale);
 };
 
 const enableCursor = () => {
