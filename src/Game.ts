@@ -846,7 +846,7 @@ class GameState {
 
         this.screenArea.position.y += this.screenArea.speed + this.screenArea.speedBoost;
         this.backgroundY -= (this.screenArea.speed + this.screenArea.speedBoost) / 10;
-        this.screenArea.speed = max(-200 * SPEED_UNIT, this.screenArea.speed - 0.005 * SPEED_UNIT);
+        this.screenArea.speed = max(-200 * SPEED_UNIT, this.screenArea.speed - 0.02 * SPEED_UNIT);
     }
 
     updateScore() {

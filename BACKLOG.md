@@ -1,5 +1,3 @@
-make it possible to jump while falling for short time
-increase game acceleration rate
 add music
 add alternative controls for mobile
 add enemy (alien)?
