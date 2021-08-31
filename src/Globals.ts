@@ -10,6 +10,7 @@ export const TERMINAL_VELOCITY = 1000 * SPEED_UNIT;
 export const WORLD_SIZE = 1000;
 export const URL_RADIUS = WORLD_SIZE / 50;
 export const TAU = Math.PI * 2;
+export const random = Math.random;
 export const scene = {
     scale: 1
 };

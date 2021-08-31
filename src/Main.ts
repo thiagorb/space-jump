@@ -1,7 +1,7 @@
 import { soundPlayer } from "./Audio";
 import { memoizedBackgroundPattern } from "./Background";
 import { createGame, Player } from "./Game";
-import { context, keyboard, keyboardMap, scene, TAU, WORLD_SIZE } from "./Globals";
+import { context, keyboard, keyboardMap, random, scene, TAU, WORLD_SIZE } from "./Globals";
 import { LocalStorage } from "./LocalStorage";
 
 const resize = () => {
@@ -123,7 +123,7 @@ export const activateMenu = () => {
     player.position.x = 250;
     player.position.y = 400;
 
-    let backgroundY = background.getHeight() * Math.random();
+    let backgroundY = background.getHeight() * random();
     let previousTime = null;
     const renderBackground = (time: number) => {
         background.draw(context, backgroundY);

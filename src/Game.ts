@@ -1,13 +1,20 @@
 import { soundPlayer } from "./Audio";
 import { memoizedBackgroundPattern } from "./Background";
-import { WORLD_SIZE, GRAVITY, TERMINAL_VELOCITY, STEPS_PER_MILISECOND, SPEED_UNIT, scene as scene, context, keyboard, JUMP_SPEED, ACCELERATION_UNIT, TAU } from "./Globals";
-import { between, sign } from "./Helpers";
+import { WORLD_SIZE, GRAVITY, TERMINAL_VELOCITY, STEPS_PER_MILISECOND, SPEED_UNIT, scene as scene, context, keyboard, JUMP_SPEED, ACCELERATION_UNIT, TAU, random } from "./Globals";
 import { LocalStorage } from "./LocalStorage";
 import { activateMenu, fadeInTransition, fadeOutTransition, waitNextFrame } from "./Main";
-import { Vector2D } from "./Vectorial";
+
+interface Vector2D {
+    x: number;
+    y: number;
+}
+
+const { cos, sin, max, min, abs, PI } = Math;
+const sign = (value: number): (-1 | 0 | 1) => value > 0 ? 1: (value < 0 ? -1 : 0);
+const between = (lower: number, upper: number, value: number) => max(lower, min(upper, value));
 
 abstract class GameObject {
-    position: Vector2D = new Vector2D();
+    position: Vector2D = {x: 0, y: 0};
 
     get bottom() {
         return this.position.y + this.height;
@@ -52,8 +59,8 @@ class RoundShape {
 
     constructor(x1: number, y1: number, x2: number, y2: number, width: number) {
         this.width = width;
-        this.begin = new Vector2D(x1, y1);
-        this.end = new Vector2D(x2, y2);
+        this.begin = {x: x1, y: y1};
+        this.end = {x: x2, y: y2};
     }
 }
 
@@ -96,8 +103,8 @@ const rocketParticles = () => {
 
     const colors = [...new Array(lifeTime)].map((_, i) => {
         const progress = i / lifeTime;
-        const yellow = 255 * Math.min(1, 1 - 2 * progress);
-        const decay = Math.max(0, Math.min(1, 1 - progress));
+        const yellow = 255 * min(1, 1 - 2 * progress);
+        const decay = between(0, 1, 1 - progress);
         return `rgba(${255 * decay}, ${yellow * decay}, 0, ${0.3 * decay})`;
     });
 
@@ -106,11 +113,11 @@ const rocketParticles = () => {
     return {
         add: (x: number, y: number) => {
             for (let i = 0; i < 10; i++) {
-                aliveParticles = Math.min(aliveParticles + 1, particles.length - 1);
+                aliveParticles = min(aliveParticles + 1, particles.length - 1);
                 const particle = particles[aliveParticles - 1];
-                particle.speed.x = (0.5 - Math.random()) * 3;
+                particle.speed.x = (0.5 - random()) * 3;
                 particle.speed.y = 10 + i;
-                particle.x = x + (0.5 - Math.random()) * 10;
+                particle.x = x + (0.5 - random()) * 10;
                 particle.y = y + 3 * i;
                 particle.time = 0;
             }
@@ -133,7 +140,7 @@ const rocketParticles = () => {
 
                 context.fillStyle = colors[particle.time];
                 context.beginPath();
-                const radius = Math.round(25 * (1 - Math.abs(0.3 - progress)));
+                const radius = Math.round(25 * (1 - abs(0.3 - progress)));
                 context.arc(particle.x, particle.y, radius, 0, TAU);
                 context.closePath();
                 context.fill();
@@ -147,7 +154,7 @@ const rocketParticles = () => {
 };
 
 export class Player extends GameObject {
-    speed: Vector2D = new Vector2D();
+    speed: Vector2D = {x: 0, y: 0};
     width: number = 70;
     height: number = 150;
     direction: number = 1;
@@ -166,8 +173,8 @@ export class Player extends GameObject {
     rocketParticles = rocketParticles();
 
     animationState = {
-        legsRotation: -Math.PI / 2,
-        armsRotation: -Math.PI / 2,
+        legsRotation: -PI / 2,
+        armsRotation: -PI / 2,
     };
 
     animationSpeed = {
@@ -176,23 +183,23 @@ export class Player extends GameObject {
     };
 
     restAnimation = [
-        { legsRotation: -Math.PI / 2 - 0.1, armsRotation: -Math.PI / 2 - 0.1 },
+        { legsRotation: -PI / 2 - 0.1, armsRotation: -PI / 2 - 0.1 },
     ];
     runAnimation = [
-        { legsRotation: -Math.PI / 2 - 0.6, armsRotation: -Math.PI / 2 + 0.6 },
-        { legsRotation: -Math.PI / 2 + 0.6, armsRotation: -Math.PI / 2 - 0.6 },
+        { legsRotation: -PI / 2 - 0.6, armsRotation: -PI / 2 + 0.6 },
+        { legsRotation: -PI / 2 + 0.6, armsRotation: -PI / 2 - 0.6 },
     ];
     jumpAnimation = [
-        { legsRotation: -Math.PI / 2 - 0.8, armsRotation: -Math.PI / 2 + 1.2 },
+        { legsRotation: -PI / 2 - 0.8, armsRotation: -PI / 2 + 1.2 },
         { goTo: 'fallingAnimation' },
     ];
     fallingAnimation = [
-        { legsRotation: -Math.PI / 2 - 0.2, armsRotation: -Math.PI / 2 - 2.2 },
-        { legsRotation: -Math.PI / 2 - 0.3, armsRotation: -Math.PI / 2 - 2.5 },
+        { legsRotation: -PI / 2 - 0.2, armsRotation: -PI / 2 - 2.2 },
+        { legsRotation: -PI / 2 - 0.3, armsRotation: -PI / 2 - 2.5 },
     ];
     risingAnimation = [
-        { legsRotation: -Math.PI / 2 - 0.1, armsRotation: -Math.PI / 2 - 0.1 },
-        { legsRotation: -Math.PI / 2 - 0.3, armsRotation: -Math.PI / 2 - 0.3 },
+        { legsRotation: -PI / 2 - 0.1, armsRotation: -PI / 2 - 0.1 },
+        { legsRotation: -PI / 2 - 0.3, armsRotation: -PI / 2 - 0.3 },
     ];
 
     animation: any = this.restAnimation;
@@ -211,7 +218,7 @@ export class Player extends GameObject {
         let reachedFrame = true;
         const animationTarget = this.animation[this.currentFrame];
         for (const key in this.animationState) {
-            if (Math.abs(animationTarget[key] - this.animationState[key]) < this.animationSpeed[key]) {
+            if (abs(animationTarget[key] - this.animationState[key]) < this.animationSpeed[key]) {
                 this.animationState[key] = animationTarget[key];
             } else {
                 reachedFrame = false;
@@ -238,15 +245,15 @@ export class Player extends GameObject {
         this.rocketParticles.render(context);
 
         this.updateAnimation();
-        this.leftLeg.end.x = this.leftLeg.begin.x + 0.5 * Math.cos(this.animationState.legsRotation);
-        this.leftLeg.end.y = this.leftLeg.begin.y - 0.5 * Math.sin(this.animationState.legsRotation);
-        this.rightLeg.end.x = this.rightLeg.begin.x - 0.5 * Math.cos(this.animationState.legsRotation);
-        this.rightLeg.end.y = this.rightLeg.begin.y - 0.5 * Math.sin(this.animationState.legsRotation);
+        this.leftLeg.end.x = this.leftLeg.begin.x + 0.5 * cos(this.animationState.legsRotation);
+        this.leftLeg.end.y = this.leftLeg.begin.y - 0.5 * sin(this.animationState.legsRotation);
+        this.rightLeg.end.x = this.rightLeg.begin.x - 0.5 * cos(this.animationState.legsRotation);
+        this.rightLeg.end.y = this.rightLeg.begin.y - 0.5 * sin(this.animationState.legsRotation);
 
-        this.leftArm.end.x = this.leftArm.begin.x + 0.4 * Math.cos(this.animationState.armsRotation);
-        this.leftArm.end.y = this.leftArm.begin.y - 0.4 * Math.sin(this.animationState.armsRotation);
-        this.rightArm.end.x = this.rightArm.begin.x - 0.4 * Math.cos(this.animationState.armsRotation);
-        this.rightArm.end.y = this.rightArm.begin.y - 0.4 * Math.sin(this.animationState.armsRotation);
+        this.leftArm.end.x = this.leftArm.begin.x + 0.4 * cos(this.animationState.armsRotation);
+        this.leftArm.end.y = this.leftArm.begin.y - 0.4 * sin(this.animationState.armsRotation);
+        this.rightArm.end.x = this.rightArm.begin.x - 0.4 * cos(this.animationState.armsRotation);
+        this.rightArm.end.y = this.rightArm.begin.y - 0.4 * sin(this.animationState.armsRotation);
 
         context.translate(this.left + this.width / 2, this.top + this.height / 2);
         context.scale(this.height / 2, this.height / 2);
@@ -314,15 +321,15 @@ export class Player extends GameObject {
         const horizontalAccel = ACCELERATION_UNIT * 2000;
         const maxHorizontalSpeed = SPEED_UNIT * 500;
         if (!state.ending && keyboard.arrowLeft) {
-            state.player.speed.x = Math.max(-maxHorizontalSpeed, state.player.speed.x - horizontalAccel);
+            state.player.speed.x = max(-maxHorizontalSpeed, state.player.speed.x - horizontalAccel);
             state.player.direction = -1;
             state.player.animation = state.player.runAnimation;
         } else if (!state.ending && keyboard.arrowRight) {
-            state.player.speed.x = Math.min(maxHorizontalSpeed, state.player.speed.x + horizontalAccel);
+            state.player.speed.x = min(maxHorizontalSpeed, state.player.speed.x + horizontalAccel);
             state.player.direction = 1;
             state.player.animation = state.player.runAnimation;
         } else {
-            state.player.speed.x = Math.abs(state.player.speed.x) > horizontalAccel
+            state.player.speed.x = abs(state.player.speed.x) > horizontalAccel
                 ? state.player.speed.x - sign(state.player.speed.x) * horizontalAccel
                 : 0;
 
@@ -333,7 +340,7 @@ export class Player extends GameObject {
 
         // gravity
         if (!state.onPlatform) {
-            state.player.speed.y = Math.min(TERMINAL_VELOCITY, state.player.speed.y + GRAVITY);
+            state.player.speed.y = min(TERMINAL_VELOCITY, state.player.speed.y + GRAVITY);
         } else if (!state.ending && keyboard.arrowUp) {
             state.player.speed.y = -JUMP_SPEED;
             state.player.animation = state.player.jumpAnimation;
@@ -355,7 +362,8 @@ export class Player extends GameObject {
             }
         }
 
-        state.player.position.add(state.player.speed);
+        state.player.position.x += state.player.speed.x;
+        state.player.position.y += state.player.speed.y;
     }
 }
 
@@ -405,7 +413,7 @@ class Rocket extends InteractiveObject {
         context.save();
         context.translate(this.position.x + this.width / 2, this.position.y + this.width / 2);
         context.scale(60, 60);
-        context.rotate(Math.cos(this.rotation * 0.1) * 0.1);
+        context.rotate(cos(this.rotation * 0.1) * 0.1);
         this.rotation++;
 
         context.lineWidth = 0.07;
@@ -438,7 +446,7 @@ class Rocket extends InteractiveObject {
             state.player.rocket = true;
 
             const deltaY = 1 - (state.player.top - state.screenArea.top) / WORLD_SIZE;
-            state.screenArea.speedBoost = Math.min(0, -1.6 * deltaY * JUMP_SPEED    );
+            state.screenArea.speedBoost = min(0, -1.6 * deltaY * JUMP_SPEED    );
         }
     }
 }
@@ -469,7 +477,7 @@ abstract class Platform extends InteractiveObject {
     }
 
     isPlayerOn(player: Player): boolean {
-        return Math.abs(player.bottom - this.top) < 10 && player.right > this.left && player.left < this.right;
+        return abs(player.bottom - this.top) < 10 && player.right > this.left && player.left < this.right;
     }
 }
 
@@ -648,15 +656,15 @@ class MovingPlatform extends Platform {
         const lights = [
             {gradient: createLightGradient({red: 255, green: 0, blue: 0}), direction: 0},
             {gradient: createLightGradient({red: 255, green: 255, blue: 0}), direction: TAU / 3},
-            {gradient: createLightGradient({red: 0, green: 0, blue: 255}), direction: 4 * Math.PI / 3},
+            {gradient: createLightGradient({red: 0, green: 0, blue: 255}), direction: 4 * PI / 3},
         ];
 
         const renderLight = (light: typeof lights[0]) => {
             const direction = light.direction + lightRotation;
             context.save();
             context.translate(
-                this.width / 2 + (this.width * Math.cos(direction)) / 2,
-                this.height / 2 - 5 + (this.height * Math.sin(direction)) / 2,
+                this.width / 2 + (this.width * cos(direction)) / 2,
+                this.height / 2 - 5 + (this.height * sin(direction)) / 2,
             );
             context.scale(20, 20);
             context.fillStyle = light.gradient;
@@ -671,7 +679,7 @@ class MovingPlatform extends Platform {
             context.translate(this.position.x, this.position.y);
 
             for (const light of lights) {
-                if ((light.direction + lightRotation) % TAU >= Math.PI) {
+                if ((light.direction + lightRotation) % TAU >= PI) {
                     renderLight(light);
                 }
             }
@@ -692,7 +700,7 @@ class MovingPlatform extends Platform {
             context.fill();
 
             for (const light of lights) {
-                if ((light.direction + lightRotation) % TAU < Math.PI) {
+                if ((light.direction + lightRotation) % TAU < PI) {
                     renderLight(light);
                 }
             }
@@ -757,7 +765,7 @@ class GameState {
 
         if (this.screenArea.top - WORLD_SIZE < this.nextPlatformTop) {
             let platform: Platform;
-            const type = Math.random();
+            const type = random();
             if (type < 0.1) {
                 platform = new IcePlatform();
             } else if (type < 0.4) {
@@ -767,14 +775,14 @@ class GameState {
             }
 
             this.objects.add(platform);
-            platform.position.x = between(0, WORLD_SIZE - platform.width, this.previousPlatformX + (0.5 - Math.random()) * 500);
+            platform.position.x = between(0, WORLD_SIZE - platform.width, this.previousPlatformX + (0.5 - random()) * 500);
             platform.position.y = this.nextPlatformTop;
             this.previousPlatformX = platform.position.x;
-            this.nextPlatformTop = this.nextPlatformTop - 100 - Math.random() * 50;
+            this.nextPlatformTop = this.nextPlatformTop - 100 - random() * 50;
 
             if (type > 0.9 || (this.rockets && type >= 0.4)) {
                 const rocket = new Rocket();
-                rocket.position.x = platform.left + (platform.width - rocket.width) * Math.random();
+                rocket.position.x = platform.left + (platform.width - rocket.width) * random();
                 rocket.position.y = platform.top - rocket.height;
                 this.objects.add(rocket);
             }
@@ -796,7 +804,7 @@ class GameState {
 
         this.screenArea.position.y += this.screenArea.speed + this.screenArea.speedBoost;
         this.backgroundY -= (this.screenArea.speed + this.screenArea.speedBoost) / 10;
-        this.screenArea.speed = Math.max(-200 * SPEED_UNIT, this.screenArea.speed - 0.005 * SPEED_UNIT);
+        this.screenArea.speed = max(-200 * SPEED_UNIT, this.screenArea.speed - 0.005 * SPEED_UNIT);
     }
 
     updateScore() {
@@ -868,7 +876,7 @@ export const createGame = ({rockets = false}) => {
 
     const state = new GameState();
 
-    state.backgroundY = background.getHeight() * Math.random();
+    state.backgroundY = background.getHeight() * random();
     state.player.position.x = (WORLD_SIZE - state.player.width) / 2;
     state.player.position.y = 10;
     state.rockets = rockets;
@@ -887,7 +895,7 @@ export const createGame = ({rockets = false}) => {
         background.draw(context, state.backgroundY);
         render(state);
 
-        const timeGap = Math.min(500, currentTime - state.previousTime + gameTimeGap);
+        const timeGap = min(500, currentTime - state.previousTime + gameTimeGap);
         const stepsTorun = (timeGap * STEPS_PER_MILISECOND) | 0;
         gameTimeGap = timeGap - (stepsTorun / STEPS_PER_MILISECOND);
         //spsCounter += stepsTorun;
@@ -940,7 +948,7 @@ export const createGame = ({rockets = false}) => {
             document.body.classList.remove('playing');
             state.ending = true;
             soundPlayer.playGameOver();
-            LocalStorage.update(storage => storage.highScore = Math.max(storage.highScore, state.score));
+            LocalStorage.update(storage => storage.highScore = max(storage.highScore, state.score));
             fadeOutTransition(3000).then(async () => {
                 state.over = true;
                 await waitNextFrame();

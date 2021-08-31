@@ -1,17 +1,17 @@
-import { TAU } from "./Globals";
+import { random, TAU } from "./Globals";
 
-const randomIntBetween = (min: number, max: number): number => min + Math.floor((max - min) * Math.random());
+const randomIntBetween = (min: number, max: number): number => min + Math.floor((max - min) * random());
 
 export class Particle {
-    opacity = Math.random() / 5;
+    opacity = random() / 5;
     smokeSize = 5;
     points: Array<{x: number, y: number, size: number}> = [];
     scale: number;
     texture: HTMLCanvasElement;
 
     constructor (params: {width: number, height: number, steps: number, texture: HTMLCanvasElement}) {
-        let direction = Math.random() * TAU;
-        let crazyness = 5; //Math.random();
+        let direction = random() * TAU;
+        let crazyness = 5; //random();
 
         let minX = 0;
         let minY = 0;
@@ -24,7 +24,7 @@ export class Particle {
         const maxSpeed = 40 * params.width / 1000;
 
         for (let i = 0; i < params.steps; i++) {
-            const speed = minSpeed + Math.random() * maxSpeed;
+            const speed = minSpeed + random() * maxSpeed;
             const deltaX = Math.cos(direction) * speed;
             const deltaY = -Math.sin(direction) * speed;
             const size = speed * this.smokeSize;
@@ -34,7 +34,7 @@ export class Particle {
             minY = Math.min(minY, y - diagonalSize);
             maxX = Math.max(maxX, x + diagonalSize);
             maxY = Math.max(maxY, y + diagonalSize);
-            direction += crazyness * Math.PI * Math.random();
+            direction += crazyness * Math.PI * random();
             this.points.push({ x, y, size });
             x += deltaX;
             y += deltaY;
@@ -54,14 +54,14 @@ export class Particle {
         context.globalAlpha = 15 * this.opacity / size;
         context.scale(this.scale, this.scale);
         context.translate(x, y);
-        context.rotate(Math.random() * TAU);
+        context.rotate(random() * TAU);
         context.drawImage(this.texture, 0 - size / 2, 0 - size / 2, size, size);
 
         context.globalAlpha = 1;
-        context.fillStyle = `rgba(${randomIntBetween(155, 255)}, ${randomIntBetween(155, 255)}, ${randomIntBetween(155, 255)}, ${Math.random()})`;
-        context.translate(2 * Math.random() * size, 2 * Math.random() * size);
+        context.fillStyle = `rgba(${randomIntBetween(155, 255)}, ${randomIntBetween(155, 255)}, ${randomIntBetween(155, 255)}, ${random()})`;
+        context.translate(2 * random() * size, 2 * random() * size);
         context.beginPath();
-        context.arc(0, 0, Math.random(), 0, TAU);
+        context.arc(0, 0, random(), 0, TAU);
         context.fill();
 
         context.restore();
@@ -79,16 +79,16 @@ const createSmokeParticle = ({color: {red, green, blue, opacity}}) => {
     canvas.height = size;
     const ctx = canvas.getContext('2d');
 
-    const xRand = -5 + Math.random() * 10;
-    const yRand = -5 + Math.random() * 10;
-    const xRand2 = 10 + Math.random() * (cx / 2);
-    const yRand2 = 10 + Math.random() * (cy / 2);
+    const xRand = -5 + random() * 10;
+    const yRand = -5 + random() * 10;
+    const xRand2 = 10 + random() * (cx / 2);
+    const yRand2 = 10 + random() * (cy / 2);
 
     ctx.fillStyle = `rgba(${red}, ${green}, ${blue}, ${opacity})`;
 
     const steps = 200;
     for (let i = 0; i < steps; i++) {
-        const randomNumber = Math.random();
+        const randomNumber = random();
         const x = Math.cos(TAU / xRand / steps * i) * randomNumber * xRand2 + cx;
         const y = Math.sin(TAU / yRand / steps * i) * randomNumber * yRand2 + cy;
 
@@ -105,8 +105,8 @@ const drawDustCloud = ({steps, x, y, width, height, context}: {steps: number, x:
     const smokeSize = Math.round(Math.max(width, height) / 5);
     const colors = [randomIntBetween(0, 255), randomIntBetween(0, 255)];
     colors.push(Math.max(0, Math.max(255, 512 - colors[0] - colors[1])));
-    const red = colors.splice(Math.floor(Math.random() * colors.length), 1).pop();
-    const green = colors.splice(Math.floor(Math.random() * colors.length), 1).pop();
+    const red = colors.splice(Math.floor(random() * colors.length), 1).pop();
+    const green = colors.splice(Math.floor(random() * colors.length), 1).pop();
     const blue = colors[0];
     const particles = [...new Array(10)].map((_, i) => new Particle({
         width,
@@ -155,18 +155,18 @@ export const createBackgroundPattern = () => {
 
         const clouds = randomIntBetween(2, 4);
         for (let i = 0; i < clouds; i++) {
-            const width = Math.round((0.5 + 1 * Math.random()) * patternSize);
-            const height = Math.round((0.2 + 0.8 * Math.random()) * patternSize);
-            const x = Math.round(Math.random() * patternSize - width / 2);
-            const y = Math.round(Math.random() * (patternSize - height));
+            const width = Math.round((0.5 + 1 * random()) * patternSize);
+            const height = Math.round((0.2 + 0.8 * random()) * patternSize);
+            const x = Math.round(random() * patternSize - width / 2);
+            const y = Math.round(random() * (patternSize - height));
             const steps = 100;
             drawDustCloud({steps, x, y, width, height, context});
         }
 
         for (let i = 0; i < 50; i++) {
             context.beginPath();
-            context.fillStyle = `rgba(${randomIntBetween(155, 255)}, ${randomIntBetween(155, 255)}, ${randomIntBetween(155, 255)}, ${Math.random()})`;
-            context.arc(patternSize * Math.random(), patternSize * Math.random(), 1.5 * Math.random(), 0, TAU);
+            context.fillStyle = `rgba(${randomIntBetween(155, 255)}, ${randomIntBetween(155, 255)}, ${randomIntBetween(155, 255)}, ${random()})`;
+            context.arc(patternSize * random(), patternSize * random(), 1.5 * random(), 0, TAU);
             context.fill();
         }
 
