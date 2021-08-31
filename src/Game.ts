@@ -153,6 +153,61 @@ const rocketParticles = () => {
     }
 };
 
+const enum AnimationProperty {
+    LegsRotation = 0,
+    ArmsRotation = 1,
+}
+
+type Animation = Array<{[property: number]: number} | {goTo: string}>
+
+const restAnimation: Animation = [
+    {
+        [AnimationProperty.LegsRotation]: -PI / 2 - 0.1,
+        [AnimationProperty.ArmsRotation]: -PI / 2 - 0.1
+    },
+];
+
+const runAnimation: Animation = [
+    {
+        [AnimationProperty.LegsRotation]: -PI / 2 - 0.6,
+        [AnimationProperty.ArmsRotation]: -PI / 2 + 0.6
+    },
+    {
+        [AnimationProperty.LegsRotation]: -PI / 2 + 0.6,
+        [AnimationProperty.ArmsRotation]: -PI / 2 - 0.6
+    },
+];
+
+const jumpAnimation: Animation = [
+    {
+        [AnimationProperty.LegsRotation]: -PI / 2 - 0.8,
+        [AnimationProperty.ArmsRotation]: -PI / 2 + 1.2
+    },
+    { goTo: 'fallingAnimation' },
+];
+
+const fallingAnimation = [
+    {
+        [AnimationProperty.LegsRotation]: -PI / 2 - 0.2,
+        [AnimationProperty.ArmsRotation]: -PI / 2 - 2.2
+    },
+    {
+        [AnimationProperty.LegsRotation]: -PI / 2 - 0.3,
+        [AnimationProperty.ArmsRotation]: -PI / 2 - 2.5
+    },
+];
+
+const risingAnimation = [
+    {
+        [AnimationProperty.LegsRotation]: -PI / 2 - 0.1,
+        [AnimationProperty.ArmsRotation]: -PI / 2 - 0.1
+    },
+    {
+        [AnimationProperty.LegsRotation]: -PI / 2 - 0.3,
+        [AnimationProperty.ArmsRotation]: -PI / 2 - 0.3
+    },
+];
+
 export class Player extends GameObject {
     speed: Vector2D = {x: 0, y: 0};
     width: number = 70;
@@ -173,36 +228,16 @@ export class Player extends GameObject {
     rocketParticles = rocketParticles();
 
     animationState = {
-        legsRotation: -PI / 2,
-        armsRotation: -PI / 2,
+        [AnimationProperty.LegsRotation]: -PI / 2,
+        [AnimationProperty.ArmsRotation]: -PI / 2,
     };
 
     animationSpeed = {
-        legsRotation: 0.12,
-        armsRotation: 0.12,
+        [AnimationProperty.LegsRotation]: 0.12,
+        [AnimationProperty.ArmsRotation]: 0.12,
     };
 
-    restAnimation = [
-        { legsRotation: -PI / 2 - 0.1, armsRotation: -PI / 2 - 0.1 },
-    ];
-    runAnimation = [
-        { legsRotation: -PI / 2 - 0.6, armsRotation: -PI / 2 + 0.6 },
-        { legsRotation: -PI / 2 + 0.6, armsRotation: -PI / 2 - 0.6 },
-    ];
-    jumpAnimation = [
-        { legsRotation: -PI / 2 - 0.8, armsRotation: -PI / 2 + 1.2 },
-        { goTo: 'fallingAnimation' },
-    ];
-    fallingAnimation = [
-        { legsRotation: -PI / 2 - 0.2, armsRotation: -PI / 2 - 2.2 },
-        { legsRotation: -PI / 2 - 0.3, armsRotation: -PI / 2 - 2.5 },
-    ];
-    risingAnimation = [
-        { legsRotation: -PI / 2 - 0.1, armsRotation: -PI / 2 - 0.1 },
-        { legsRotation: -PI / 2 - 0.3, armsRotation: -PI / 2 - 0.3 },
-    ];
-
-    animation: any = this.restAnimation;
+    animation: Animation = restAnimation;
     currentFrame = 0;
 
     updateAnimation() {
@@ -210,19 +245,19 @@ export class Player extends GameObject {
             this.currentFrame = 0;
         }
 
-        if (this.animation[this.currentFrame].goTo) {
-            this.animation = this[this.animation[this.currentFrame].goTo];
+        const frame = this.animation[this.currentFrame];
+        if ('goTo' in frame) {
+            this.animation = this[frame.goTo];
             this.currentFrame = 0;
         }
 
         let reachedFrame = true;
-        const animationTarget = this.animation[this.currentFrame];
         for (const key in this.animationState) {
-            if (abs(animationTarget[key] - this.animationState[key]) < this.animationSpeed[key]) {
-                this.animationState[key] = animationTarget[key];
+            if (abs(frame[key] - this.animationState[key]) < this.animationSpeed[key]) {
+                this.animationState[key] = frame[key];
             } else {
                 reachedFrame = false;
-                this.animationState[key] += this.animationSpeed[key] * sign(animationTarget[key] - this.animationState[key]);
+                this.animationState[key] += this.animationSpeed[key] * sign(frame[key] - this.animationState[key]);
             }
         }
 
@@ -245,15 +280,15 @@ export class Player extends GameObject {
         this.rocketParticles.render(context);
 
         this.updateAnimation();
-        this.leftLeg.end.x = this.leftLeg.begin.x + 0.5 * cos(this.animationState.legsRotation);
-        this.leftLeg.end.y = this.leftLeg.begin.y - 0.5 * sin(this.animationState.legsRotation);
-        this.rightLeg.end.x = this.rightLeg.begin.x - 0.5 * cos(this.animationState.legsRotation);
-        this.rightLeg.end.y = this.rightLeg.begin.y - 0.5 * sin(this.animationState.legsRotation);
+        this.leftLeg.end.x = this.leftLeg.begin.x + 0.5 * cos(this.animationState[AnimationProperty.LegsRotation]);
+        this.leftLeg.end.y = this.leftLeg.begin.y - 0.5 * sin(this.animationState[AnimationProperty.LegsRotation]);
+        this.rightLeg.end.x = this.rightLeg.begin.x - 0.5 * cos(this.animationState[AnimationProperty.LegsRotation]);
+        this.rightLeg.end.y = this.rightLeg.begin.y - 0.5 * sin(this.animationState[AnimationProperty.LegsRotation]);
 
-        this.leftArm.end.x = this.leftArm.begin.x + 0.4 * cos(this.animationState.armsRotation);
-        this.leftArm.end.y = this.leftArm.begin.y - 0.4 * sin(this.animationState.armsRotation);
-        this.rightArm.end.x = this.rightArm.begin.x - 0.4 * cos(this.animationState.armsRotation);
-        this.rightArm.end.y = this.rightArm.begin.y - 0.4 * sin(this.animationState.armsRotation);
+        this.leftArm.end.x = this.leftArm.begin.x + 0.4 * cos(this.animationState[AnimationProperty.ArmsRotation]);
+        this.leftArm.end.y = this.leftArm.begin.y - 0.4 * sin(this.animationState[AnimationProperty.ArmsRotation]);
+        this.rightArm.end.x = this.rightArm.begin.x - 0.4 * cos(this.animationState[AnimationProperty.ArmsRotation]);
+        this.rightArm.end.y = this.rightArm.begin.y - 0.4 * sin(this.animationState[AnimationProperty.ArmsRotation]);
 
         context.translate(this.left + this.width / 2, this.top + this.height / 2);
         context.scale(this.height / 2, this.height / 2);
@@ -323,18 +358,18 @@ export class Player extends GameObject {
         if (!state.ending && keyboard.arrowLeft) {
             state.player.speed.x = max(-maxHorizontalSpeed, state.player.speed.x - horizontalAccel);
             state.player.direction = -1;
-            state.player.animation = state.player.runAnimation;
+            state.player.animation = runAnimation;
         } else if (!state.ending && keyboard.arrowRight) {
             state.player.speed.x = min(maxHorizontalSpeed, state.player.speed.x + horizontalAccel);
             state.player.direction = 1;
-            state.player.animation = state.player.runAnimation;
+            state.player.animation = runAnimation;
         } else {
             state.player.speed.x = abs(state.player.speed.x) > horizontalAccel
                 ? state.player.speed.x - sign(state.player.speed.x) * horizontalAccel
                 : 0;
 
             if (state.onPlatform) {
-                state.player.animation = state.player.restAnimation;
+                state.player.animation = restAnimation;
             }
         }
 
@@ -343,7 +378,7 @@ export class Player extends GameObject {
             state.player.speed.y = min(TERMINAL_VELOCITY, state.player.speed.y + GRAVITY);
         } else if (!state.ending && keyboard.arrowUp) {
             state.player.speed.y = -JUMP_SPEED;
-            state.player.animation = state.player.jumpAnimation;
+            state.player.animation = jumpAnimation;
             state.player.currentFrame = 0;
             soundPlayer.playJump();
         } else if (state.player.speed.y > 0) {
@@ -352,12 +387,12 @@ export class Player extends GameObject {
 
         if (!state.onPlatform) {
             if (state.player.speed.y > 0) {
-                state.player.animation = state.player.fallingAnimation;
-            } else if (state.player.animation !== state.player.jumpAnimation) {
+                state.player.animation = fallingAnimation;
+            } else if (state.player.animation !== jumpAnimation) {
                 if (state.player.rocket) {
-                    state.player.animation = state.player.risingAnimation;
+                    state.player.animation = risingAnimation;
                 } else {
-                    state.player.animation = state.player.restAnimation;
+                    state.player.animation = restAnimation;
                 }
             }
         }
