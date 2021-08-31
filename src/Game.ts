@@ -1,6 +1,6 @@
 import { soundPlayer } from "./Audio";
 import { memoizedBackgroundPattern } from "./Background";
-import { WORLD_SIZE, GRAVITY, TERMINAL_VELOCITY, STEPS_PER_MILISECOND, SPEED_UNIT, scene as scene, context, keyboard, JUMP_SPEED, ACCELERATION_UNIT } from "./Globals";
+import { WORLD_SIZE, GRAVITY, TERMINAL_VELOCITY, STEPS_PER_MILISECOND, SPEED_UNIT, scene as scene, context, keyboard, JUMP_SPEED, ACCELERATION_UNIT, TAU } from "./Globals";
 import { between, sign } from "./Helpers";
 import { LocalStorage } from "./LocalStorage";
 import { activateMenu, fadeInTransition, fadeOutTransition, waitNextFrame } from "./Main";
@@ -134,7 +134,7 @@ const rocketParticles = () => {
                 context.fillStyle = colors[particle.time];
                 context.beginPath();
                 const radius = Math.round(25 * (1 - Math.abs(0.3 - progress)));
-                context.arc(particle.x, particle.y, radius, 0, 2 * Math.PI);
+                context.arc(particle.x, particle.y, radius, 0, TAU);
                 context.closePath();
                 context.fill();
 
@@ -444,8 +444,15 @@ class Rocket extends InteractiveObject {
 }
 
 abstract class Platform extends InteractiveObject {
-    width: number = 100;
-    height: number = 20;
+    static width: number = 100;
+    static height: number = 20;
+    get width() {
+        return Platform.width;
+    }
+
+    get height() {
+        return Platform.height;
+    }
 
     abstract render(context: CanvasRenderingContext2D): void;
     tick(state: GameState) {
@@ -467,26 +474,12 @@ abstract class Platform extends InteractiveObject {
 }
 
 class StaticPlatform extends Platform {
-    render(context: CanvasRenderingContext2D) {
-        context.save();
-        context.translate(this.position.x, this.position.y);
-
-        // Start bottom and middle
-        context.save();
-        context.translate(this.width / 2, this.height / 2 + 20);
-        context.scale(this.width / 2, this.height / 2);
-        context.beginPath();
-        context.rect(-1, -3, 2, 2);
-        context.ellipse(0, -1, 1, 1, 0, 0, Math.PI * 2);
-        context.clip();
-
+    render = (() => {
         const linear = context.createLinearGradient(-1, 0, 1, 0);
         linear.addColorStop(0.1, '#bbb');
         linear.addColorStop(0.2, '#fff');
         linear.addColorStop(0.3, '#bbb');
         linear.addColorStop(1, '#555');
-        context.fillStyle = linear;
-        context.fillRect(-1, -3, 2, 10);
 
         const linearRot = context.createLinearGradient(-1, 0, 0, 0.2);
         linearRot.addColorStop(0.1, `rgba(255, 255, 255, 0.0)`);
@@ -495,66 +488,65 @@ class StaticPlatform extends Platform {
         linearRot.addColorStop(0.5, `rgba(255, 255, 255, 0.0)`);
         linearRot.addColorStop(0.6, `rgba(255, 255, 255, 0.3)`);
         linearRot.addColorStop(0.9, `rgba(255, 255, 255, 0.0)`);
-        context.fillStyle = linearRot;
-        context.fillRect(-1, -2, 2, 10);
 
-        context.restore();
-        // End bottom and middle
-
-        // Start top
-        context.save();
-        context.translate(this.width / 2, this.height / 2 - 10);
-        context.scale(this.width / 2, this.height / 2);
         const radial2 = context.createRadialGradient(0, -1, 0, 0, 0, 1);
         radial2.addColorStop(0.5, `rgba(120, 120, 120, 1.0)`);
         radial2.addColorStop(1, `rgba(160, 160, 160, 1.0)`);
-        context.fillStyle = radial2;
 
-        context.beginPath();
-        context.ellipse(0, 0, 1, 1, 0, 0, Math.PI * 2);
-        context.closePath();
-        context.fill();
-        context.restore();
-        // End top
+        return (context: CanvasRenderingContext2D) => {
+            context.save();
+            context.translate(this.position.x, this.position.y);
 
-        context.restore();
-    }
+            // Start bottom and middle
+            context.save();
+            context.translate(Platform.width / 2, Platform.height / 2 + 20);
+            context.scale(Platform.width / 2, Platform.height / 2);
+            context.beginPath();
+            context.rect(-1, -3, 2, 2);
+            context.ellipse(0, -1, 1, 1, 0, 0, TAU);
+            context.clip();
+            context.fillStyle = linear;
+            context.fillRect(-1, -3, 2, 10);
+
+            context.fillStyle = linearRot;
+            context.fillRect(-1, -2, 2, 10);
+
+            context.restore();
+            // End bottom and middle
+
+            // Start top
+            context.save();
+            context.translate(Platform.width / 2, Platform.height / 2 - 10);
+            context.scale(Platform.width / 2, Platform.height / 2);
+            context.fillStyle = radial2;
+
+            context.beginPath();
+            context.ellipse(0, 0, 1, 1, 0, 0, TAU);
+            context.closePath();
+            context.fill();
+            context.restore();
+            // End top
+
+            context.restore();
+        };
+    })();
 }
 
 class IcePlatform extends Platform {
     time: number = IcePlatform.maxTime;
     disappearing: boolean = false;
 
-    render(context: CanvasRenderingContext2D) {
-        context.save();
-        context.translate(this.position.x, this.position.y);
-        context.globalAlpha = this.time / IcePlatform.maxTime;
 
-        // Start bottom and middle
-        context.save();
-        context.translate(this.width / 2, this.height / 2 + 20);
-        context.scale(this.width / 2, this.height / 2);
+    render = (() => {
         const radial = context.createRadialGradient(0, 0, 0, 0, 0, 1);
         radial.addColorStop(0.5, `rgba(255, 255, 255, 0.0)`);
         radial.addColorStop(1, `rgba(255, 255, 255, 0.2)`);
-        context.fillStyle = radial;
-
-        context.beginPath();
-        context.ellipse(0, 0, 1, 1, 0, 0, Math.PI * 2);
-        context.fill();
-
-        context.beginPath();
-        context.rect(-1, -3, 2, 3);
-        context.ellipse(0, 0, 1, 1, 0, 0, Math.PI * 2);
-        context.clip();
 
         const linear = context.createLinearGradient(-1, 0, 1, 0);
         linear.addColorStop(0, `rgba(255, 255, 255, 0.2)`);
         linear.addColorStop(0.2, `rgba(255, 255, 255, 0.0)`);
         linear.addColorStop(0.7, `rgba(255, 255, 255, 0.0)`);
         linear.addColorStop(1, `rgba(255, 255, 255, 0.5)`);
-        context.fillStyle = linear;
-        context.fillRect(-1, -3, 2, 10);
 
         const linearRot = context.createLinearGradient(-1, 0, 0, 0.2);
         linearRot.addColorStop(0.1, `rgba(255, 255, 255, 0.0)`);
@@ -563,30 +555,55 @@ class IcePlatform extends Platform {
         linearRot.addColorStop(0.5, `rgba(255, 255, 255, 0.0)`);
         linearRot.addColorStop(0.6, `rgba(255, 255, 255, 0.3)`);
         linearRot.addColorStop(0.9, `rgba(255, 255, 255, 0.0)`);
-        context.fillStyle = linearRot;
-        context.fillRect(-1, -3, 2, 10);
 
-        context.restore();
-        // End bottom and middle
-
-        // Start top
-        context.save();
-        context.translate(this.width / 2, this.height / 2 - 10);
-        context.scale(this.width / 2, this.height / 2);
         const radial2 = context.createRadialGradient(0, 0, 0, 0, 0, 1);
         radial2.addColorStop(0.5, `rgba(255, 255, 255, 0.0)`);
         radial2.addColorStop(1, `rgba(255, 255, 255, 0.7)`);
-        context.fillStyle = radial2;
 
-        context.beginPath();
-        context.ellipse(0, 0, 1, 1, 0, 0, Math.PI * 2);
-        context.fill();
-        context.restore();
-        // End top
+        return (context: CanvasRenderingContext2D) => {
+            context.save();
+            context.translate(this.position.x, this.position.y);
+            context.globalAlpha = this.time / IcePlatform.maxTime;
 
-        context.restore();
+            // Start bottom and middle
+            context.save();
+            context.translate(this.width / 2, this.height / 2 + 20);
+            context.scale(this.width / 2, this.height / 2);
+            context.fillStyle = radial;
 
-    }
+            context.beginPath();
+            context.ellipse(0, 0, 1, 1, 0, 0, TAU);
+            context.fill();
+
+            context.beginPath();
+            context.rect(-1, -3, 2, 3);
+            context.ellipse(0, 0, 1, 1, 0, 0, TAU);
+            context.clip();
+
+            context.fillStyle = linear;
+            context.fillRect(-1, -3, 2, 10);
+
+            context.fillStyle = linearRot;
+            context.fillRect(-1, -3, 2, 10);
+
+            context.restore();
+            // End bottom and middle
+
+            // Start top
+            context.save();
+            context.translate(this.width / 2, this.height / 2 - 10);
+            context.scale(this.width / 2, this.height / 2);
+            context.fillStyle = radial2;
+
+            context.beginPath();
+            context.ellipse(0, 0, 1, 1, 0, 0, TAU);
+            context.fill();
+            context.restore();
+            // End top
+
+            context.restore();
+        };
+    })();
 
     tick(state: GameState) {
         super.tick(state);
@@ -616,67 +633,75 @@ class IcePlatform extends Platform {
 
 class MovingPlatform extends Platform {
     direction: number = 1;
-    lightRotation: number = 0;
-    lights = [
-        {color: {red: 255, green: 0, blue: 0}, direction: 0},
-        {color: {red: 255, green: 255, blue: 0}, direction: 2 * Math.PI / 3},
-        {color: {red: 0, green: 0, blue: 255}, direction: 4 * Math.PI / 3},
-    ];
 
-    renderLight({red, green, blue}, direction: number) {
-        context.save();
-        context.translate(
-            this.width / 2 + (this.width * Math.cos(direction)) / 2,
-            this.height / 2 - 5 + (this.height * Math.sin(direction)) / 2,
-        );
-        context.scale(20, 20);
-        const light = context.createRadialGradient(0, 0, 0, 0, 0, 1);
-        light.addColorStop(0, `rgba(${red}, ${green}, ${blue}, 0.9)`);
-        light.addColorStop(0.1, `rgba(${red}, ${green}, ${blue}, 0.7)`);
-        light.addColorStop(0.2, `rgba(${red}, ${green}, ${blue}, 0.2)`);
-        light.addColorStop(1, `rgba(${red}, ${green}, ${blue}, 0)`);
-        context.fillStyle = light;
-        context.beginPath();
-        context.arc(0, 0, 1, 0, Math.PI * 2);
-        context.fill();
-        context.restore();
-    }
+    render = (() => {
+        const createLightGradient = ({ red, green, blue }) => {
+            const light = context.createRadialGradient(0, 0, 0, 0, 0, 1);
+            light.addColorStop(0, `rgba(${red}, ${green}, ${blue}, 0.9)`);
+            light.addColorStop(0.1, `rgba(${red}, ${green}, ${blue}, 0.7)`);
+            light.addColorStop(0.2, `rgba(${red}, ${green}, ${blue}, 0.2)`);
+            light.addColorStop(1, `rgba(${red}, ${green}, ${blue}, 0)`);
+            return light;
+        };
 
-    render(context: CanvasRenderingContext2D) {
-        context.save();
-        context.translate(this.position.x, this.position.y);
+        let lightRotation: number = 0;
+        const lights = [
+            {gradient: createLightGradient({red: 255, green: 0, blue: 0}), direction: 0},
+            {gradient: createLightGradient({red: 255, green: 255, blue: 0}), direction: TAU / 3},
+            {gradient: createLightGradient({red: 0, green: 0, blue: 255}), direction: 4 * Math.PI / 3},
+        ];
 
-        for (const light of this.lights) {
-            if ((light.direction + this.lightRotation) % (Math.PI * 2) >= Math.PI) {
-                this.renderLight(light.color, light.direction + this.lightRotation);
+        const renderLight = (light: typeof lights[0]) => {
+            const direction = light.direction + lightRotation;
+            context.save();
+            context.translate(
+                this.width / 2 + (this.width * Math.cos(direction)) / 2,
+                this.height / 2 - 5 + (this.height * Math.sin(direction)) / 2,
+            );
+            context.scale(20, 20);
+            context.fillStyle = light.gradient;
+            context.beginPath();
+            context.arc(0, 0, 1, 0, TAU);
+            context.fill();
+            context.restore();
+        };
+
+        return (context: CanvasRenderingContext2D) => {
+            context.save();
+            context.translate(this.position.x, this.position.y);
+
+            for (const light of lights) {
+                if ((light.direction + lightRotation) % TAU >= Math.PI) {
+                    renderLight(light);
+                }
             }
-        }
 
-        context.fillStyle = '#aaa';
-        context.beginPath();
-        context.ellipse(this.width / 2, this.height / 2 + 10, this.width / 2, this.height / 2, 0, 0, Math.PI * 2);
-        context.fill();
+            context.fillStyle = '#aaa';
+            context.beginPath();
+            context.ellipse(this.width / 2, this.height / 2 + 10, this.width / 2, this.height / 2, 0, 0, TAU);
+            context.fill();
 
-        context.fillStyle = 'black';
-        context.beginPath();
-        context.ellipse(this.width / 2, this.height / 2, this.width / 2, this.height / 2, 0, 0, Math.PI * 2);
-        context.fill();
+            context.fillStyle = 'black';
+            context.beginPath();
+            context.ellipse(this.width / 2, this.height / 2, this.width / 2, this.height / 2, 0, 0, TAU);
+            context.fill();
 
-        context.fillStyle = '#aaa';
-        context.beginPath();
-        context.ellipse(this.width / 2, this.height / 2 - 10, this.width / 2, this.height / 2, 0, 0, Math.PI * 2);
-        context.fill();
+            context.fillStyle = '#aaa';
+            context.beginPath();
+            context.ellipse(this.width / 2, this.height / 2 - 10, this.width / 2, this.height / 2, 0, 0, TAU);
+            context.fill();
 
-        for (const light of this.lights) {
-            if ((light.direction + this.lightRotation) % (Math.PI * 2) < Math.PI) {
-                this.renderLight(light.color, light.direction + this.lightRotation);
+            for (const light of lights) {
+                if ((light.direction + lightRotation) % TAU < Math.PI) {
+                    renderLight(light);
+                }
             }
+
+            lightRotation = (TAU + lightRotation + this.direction * 0.1) % TAU;
+
+            context.restore();
         }
-
-        this.lightRotation += 0.1;
-
-        context.restore();
-    }
+    })();
 
     tick(state: GameState) {
         super.tick(state);

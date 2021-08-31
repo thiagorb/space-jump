@@ -1,7 +1,7 @@
 import { soundPlayer } from "./Audio";
 import { memoizedBackgroundPattern } from "./Background";
 import { createGame, Player } from "./Game";
-import { context, keyboard, keyboardMap, scene, setContext, WORLD_SIZE } from "./Globals";
+import { context, keyboard, keyboardMap, scene, TAU, WORLD_SIZE } from "./Globals";
 import { LocalStorage } from "./LocalStorage";
 
 const resize = () => {
@@ -236,8 +236,8 @@ const initializeCursor = () => {
 
 const stampCircle = (context: CanvasRenderingContext2D, stamp: HTMLCanvasElement, textRadius: number, x: number, y: number) => {
     textRadius = textRadius;
-    const steps = Math.ceil(Math.PI * 2 * textRadius);
-    const angleStep = 2 * Math.PI / steps;
+    const steps = Math.ceil(TAU * textRadius);
+    const angleStep = TAU / steps;
     for (let i = 0; i < steps; i++) {
         const angle = i * angleStep;
         context.drawImage(stamp, x + textRadius * Math.cos(angle), y - textRadius * Math.sin(angle));
@@ -514,6 +514,3 @@ if (isTouchDevice()) {
     document.addEventListener('touchstart', setActive(filterTouch(flagKey)));
     document.addEventListener('touchend', unsetActive(filterTouch(unflagKey)));
 }
-
-const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas');
-setContext(canvas.getContext('2d'));

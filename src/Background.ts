@@ -1,3 +1,5 @@
+import { TAU } from "./Globals";
+
 const randomIntBetween = (min: number, max: number): number => min + Math.floor((max - min) * Math.random());
 
 export class Particle {
@@ -8,7 +10,7 @@ export class Particle {
     texture: HTMLCanvasElement;
 
     constructor (params: {width: number, height: number, steps: number, texture: HTMLCanvasElement}) {
-        let direction = Math.random() * Math.PI * 2;
+        let direction = Math.random() * TAU;
         let crazyness = 5; //Math.random();
 
         let minX = 0;
@@ -52,14 +54,14 @@ export class Particle {
         context.globalAlpha = 15 * this.opacity / size;
         context.scale(this.scale, this.scale);
         context.translate(x, y);
-        context.rotate(Math.random() * Math.PI * 2);
+        context.rotate(Math.random() * TAU);
         context.drawImage(this.texture, 0 - size / 2, 0 - size / 2, size, size);
 
         context.globalAlpha = 1;
         context.fillStyle = `rgba(${randomIntBetween(155, 255)}, ${randomIntBetween(155, 255)}, ${randomIntBetween(155, 255)}, ${Math.random()})`;
         context.translate(2 * Math.random() * size, 2 * Math.random() * size);
         context.beginPath();
-        context.arc(0, 0, Math.random(), 0, Math.PI * 2);
+        context.arc(0, 0, Math.random(), 0, TAU);
         context.fill();
 
         context.restore();
@@ -87,12 +89,12 @@ const createSmokeParticle = ({color: {red, green, blue, opacity}}) => {
     const steps = 200;
     for (let i = 0; i < steps; i++) {
         const randomNumber = Math.random();
-        const x = Math.cos(Math.PI * 2 / xRand / steps * i) * randomNumber * xRand2 + cx;
-        const y = Math.sin(Math.PI * 2 / yRand / steps * i) * randomNumber * yRand2 + cy;
+        const x = Math.cos(TAU / xRand / steps * i) * randomNumber * xRand2 + cx;
+        const y = Math.sin(TAU / yRand / steps * i) * randomNumber * yRand2 + cy;
 
         ctx.moveTo(x, y);
         ctx.beginPath();
-        ctx.arc(x, y, randomNumber * 4, 0, Math.PI * 2);
+        ctx.arc(x, y, randomNumber * 4, 0, TAU);
         ctx.fill();
     }
 
@@ -164,7 +166,7 @@ export const createBackgroundPattern = () => {
         for (let i = 0; i < 50; i++) {
             context.beginPath();
             context.fillStyle = `rgba(${randomIntBetween(155, 255)}, ${randomIntBetween(155, 255)}, ${randomIntBetween(155, 255)}, ${Math.random()})`;
-            context.arc(patternSize * Math.random(), patternSize * Math.random(), 1.5 * Math.random(), 0, Math.PI * 2);
+            context.arc(patternSize * Math.random(), patternSize * Math.random(), 1.5 * Math.random(), 0, TAU);
             context.fill();
         }
 
