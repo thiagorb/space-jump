@@ -1,5 +1,5 @@
 import { soundPlayer } from "./Audio";
-import { memoizedBackgroundPattern } from "./Background";
+import { memoizedBackgroundPattern as getBackground } from "./Background";
 import { WORLD_SIZE, GRAVITY, TERMINAL_VELOCITY, STEPS_PER_MILISECOND, SPEED_UNIT, scene as scene, context, keyboard, JUMP_SPEED, ACCELERATION_UNIT, TAU, random } from "./Globals";
 import { LocalStorage } from "./LocalStorage";
 import { activateMenu, fadeInTransition, fadeOutTransition, waitNextFrame } from "./Main";
@@ -321,15 +321,14 @@ export class Player extends GameObject {
             drawRoundShapeLight(context, this.rightArm);
         }
 
-        context.fillStyle = 'black';
+        context.save();
         this.drawGlass(context);
-        /*
-        context.font = '0.4px Arial';
-        context.textAlign = 'center';
-        context.fillText('😄', 0.12 * this.direction, -0.45);
-        context.fillStyle = 'rgba(0, 0, 0, 0.8)';
-        this.drawGlass();
-        //*/
+        context.clip();
+        context.scale(2 / this.height, 2 / this.height);
+        const background = getBackground();
+        context.translate(WORLD_SIZE / 2 - background.canvas.width / 2 - this.left - this.width / 2, 0);
+        background.draw(context, this.top);
+        context.restore();
 
         context.strokeStyle = 'white';
         context.lineWidth = 0.05;
@@ -350,7 +349,6 @@ export class Player extends GameObject {
         context.bezierCurveTo(startX + 0.0 * this.direction, startY - 0.0, -0.5 * this.direction, -1.0, -0.0 * this.direction, -0.4);
         context.bezierCurveTo(0.4 * this.direction, -0.3, 0.73 * this.direction, -0.5, startX, startY);
         context.closePath();
-        context.fill();
     }
 
     tick(state: GameState) {
@@ -911,7 +909,7 @@ const render = (state: GameState) => {
 };
 
 export const createGame = ({rockets = false}) => {
-    const background = memoizedBackgroundPattern().getBackground();
+    const background = getBackground();
 
     let gameTimeGap = 0;
     let currentStep: number = 0;

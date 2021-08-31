@@ -116,9 +116,8 @@ document.addEventListener('keyup', (e: KeyboardEvent) => {
 let menuActive = false;
 
 export const activateMenu = () => {
-    const pattern = memoizedBackgroundPattern();
-    pattern.increment();
-    const background = pattern.getBackground();
+    const background = memoizedBackgroundPattern();
+    background.increment();
     const player = new Player();
     player.position.x = 250;
     player.position.y = 400;

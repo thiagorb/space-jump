@@ -176,28 +176,22 @@ export const createBackgroundPattern = () => {
         filledScreens++;
     };
 
-    const getBackground = () => {
-        const getHeight = () => filledScreens * patternSize * patternScale;
-        const background = {
-            getHeight,
-            canvas: patternCanvas,
-            draw: (context: CanvasRenderingContext2D, yOffset: number) => {
-                const realOffset = yOffset % getHeight();
-                context.drawImage(patternCanvas, 0, realOffset - getHeight());
-                context.drawImage(patternCanvas, 0, realOffset);
-                patternCanvas
-            }
-        };
-        return background;
-    };
+    const getHeight = () => filledScreens * patternSize * patternScale;
 
     return {
         increment,
-        getBackground
+        getHeight,
+        canvas: patternCanvas,
+        draw: (context: CanvasRenderingContext2D, yOffset: number) => {
+            const realOffset = yOffset % getHeight();
+            context.drawImage(patternCanvas, 0, realOffset - getHeight());
+            context.drawImage(patternCanvas, 0, realOffset);
+            patternCanvas
+        }
     };
 };
 
-export const memoizedBackgroundPattern = (() => {
+export const getBackground: () => ReturnType<typeof createBackgroundPattern> = (() => {
     let memoized = null;
     return () => {
         if (!memoized) {
