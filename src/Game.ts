@@ -214,6 +214,7 @@ export class Player extends GameObject {
     height: number = 150;
     direction: number = 1;
     rocket: boolean = false;
+    jumpGrace: number = 0;
 
     legGap = 0.25;
     armGap = 0.5;
@@ -376,16 +377,22 @@ export class Player extends GameObject {
         // gravity
         if (!state.onPlatform) {
             state.player.speed.y = min(TERMINAL_VELOCITY, state.player.speed.y + GRAVITY);
-        } else if (!state.ending && keyboard.arrowUp) {
-            state.player.speed.y = -JUMP_SPEED;
-            state.player.animation = jumpAnimation;
-            state.player.currentFrame = 0;
-            soundPlayer.playJump();
         } else if (state.player.speed.y > 0) {
             state.player.speed.y = 0;
         }
 
-        if (!state.onPlatform) {
+        if ((state.onPlatform || this.jumpGrace > 0) && !state.ending && keyboard.arrowUp) {
+            this.jumpGrace = 0;
+            state.player.speed.y = -JUMP_SPEED;
+            state.player.animation = jumpAnimation;
+            state.player.currentFrame = 0;
+            soundPlayer.playJump();
+        }
+
+        if (state.onPlatform) {
+            this.jumpGrace = 100 * STEPS_PER_MILISECOND;
+        } else {
+            this.jumpGrace = max(0, this.jumpGrace - 1);
             if (state.player.speed.y > 0) {
                 state.player.animation = fallingAnimation;
             } else if (state.player.animation !== jumpAnimation) {
