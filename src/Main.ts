@@ -1,5 +1,5 @@
 import { soundPlayer } from "./Audio";
-import { memoizedBackgroundPattern } from "./Background";
+import { getBackground } from "./Background";
 import { createGame, Player } from "./Game";
 import { context, keyboard, keyboardMap, random, scene, TAU, WORLD_SIZE } from "./Globals";
 import { LocalStorage } from "./LocalStorage";
@@ -116,7 +116,7 @@ document.addEventListener('keyup', (e: KeyboardEvent) => {
 let menuActive = false;
 
 export const activateMenu = () => {
-    const background = memoizedBackgroundPattern();
+    const background = getBackground();
     background.increment();
     const player = new Player();
     player.position.x = 250;
@@ -383,14 +383,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const closeFullScreen = async () => {
         await fadeOutTransition();
-        memoizedBackgroundPattern().increment();
+        getBackground().increment();
         document.querySelector('#fullscreen-question').remove();
         goToAudio();
     }
 
     const closeAudio = async () => {
         await fadeOutTransition();
-        memoizedBackgroundPattern().increment();
+        getBackground().increment();
         document.querySelector('#audio-question').remove();
         goToMenu();
     }

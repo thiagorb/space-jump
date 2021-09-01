@@ -1,5 +1,5 @@
 import { soundPlayer } from "./Audio";
-import { memoizedBackgroundPattern as getBackground } from "./Background";
+import { getBackground as getBackground } from "./Background";
 import { WORLD_SIZE, GRAVITY, TERMINAL_VELOCITY, STEPS_PER_MILISECOND, SPEED_UNIT, scene as scene, context, keyboard, JUMP_SPEED, ACCELERATION_UNIT, TAU, random } from "./Globals";
 import { LocalStorage } from "./LocalStorage";
 import { activateMenu, fadeInTransition, fadeOutTransition, waitNextFrame } from "./Main";
@@ -88,6 +88,8 @@ const drawRoundShape = (context: CanvasRenderingContext2D, roundShape: RoundShap
     context.stroke();
 };
 
+const isFirefox = navigator.userAgent.search('Firefox') >= 0;
+
 const rocketParticles = () => {
     const lifeTime = 20;
     const maxParticles: number = 250;
@@ -141,7 +143,12 @@ const rocketParticles = () => {
                 context.fillStyle = colors[particle.time];
                 context.beginPath();
                 const radius = Math.round(25 * (1 - abs(0.3 - progress)));
-                context.arc(particle.x, particle.y, radius, 0, TAU);
+                if (isFirefox) {
+                    const length = radius * 2;
+                    context.fillRect(Math.round(particle.x - radius), Math.round(particle.y) - radius, length, length);
+                } else {
+                    context.arc(Math.round(particle.x), Math.round(particle.y), radius, 0, TAU);
+                }
                 context.closePath();
                 context.fill();
 
@@ -215,6 +222,7 @@ export class Player extends GameObject {
     direction: number = 1;
     rocket: boolean = false;
     jumpGrace: number = 0;
+    high: number = Infinity;
 
     legGap = 0.25;
     armGap = 0.5;
@@ -321,16 +329,11 @@ export class Player extends GameObject {
             drawRoundShapeLight(context, this.rightArm);
         }
 
-        context.save();
         this.drawGlass(context);
-        context.clip();
-        context.scale(2 / this.height, 2 / this.height);
-        const background = getBackground();
-        context.translate(WORLD_SIZE / 2 - background.canvas.width / 2 - this.left - this.width / 2, 0);
-        background.draw(context, this.top);
-        context.restore();
+        context.fillStyle = '#000';
+        context.fill();
 
-        context.strokeStyle = 'white';
+        context.strokeStyle = '#fff';
         context.lineWidth = 0.05;
         context.beginPath();
         context.bezierCurveTo(0.35 * this.direction, -0.7, 0.34 * this.direction, -0.75, 0.26 * this.direction, -0.82);
@@ -354,6 +357,8 @@ export class Player extends GameObject {
     tick(state: GameState) {
         const horizontalAccel = ACCELERATION_UNIT * 2000;
         const maxHorizontalSpeed = SPEED_UNIT * 500;
+        const previousSpeed = state.player.speed.y;
+
         if (!state.ending && keyboard.arrowLeft) {
             state.player.speed.x = max(-maxHorizontalSpeed, state.player.speed.x - horizontalAccel);
             state.player.direction = -1;
@@ -372,7 +377,6 @@ export class Player extends GameObject {
             }
         }
 
-        // gravity
         if (!state.onPlatform) {
             state.player.speed.y = min(TERMINAL_VELOCITY, state.player.speed.y + GRAVITY);
         } else if (state.player.speed.y > 0) {
@@ -388,7 +392,7 @@ export class Player extends GameObject {
         }
 
         if (state.onPlatform) {
-            this.jumpGrace = 100 * STEPS_PER_MILISECOND;
+            this.jumpGrace = 85 * STEPS_PER_MILISECOND;
         } else {
             this.jumpGrace = max(0, this.jumpGrace - 1);
             if (state.player.speed.y > 0) {
@@ -404,6 +408,10 @@ export class Player extends GameObject {
 
         state.player.position.x += state.player.speed.x;
         state.player.position.y += state.player.speed.y;
+
+        if (previousSpeed <= 0 && state.player.speed.y >= 0) {
+            state.player.high = state.player.bottom;
+        }
     }
 }
 
@@ -510,7 +518,7 @@ abstract class Platform extends InteractiveObject {
     }
 
     preTick(state: GameState) {
-        if (this !== state.ignorePlatform && state.player.speed.y >= 0 && this.isPlayerOn(state.player)) {
+        if (this !== state.ignorePlatform && state.player.high <= this.top && state.player.speed.y >= 0 && this.isPlayerOn(state.player)) {
             state.onPlatform = this;
             state.player.position.y = this.top - state.player.height;
         }
@@ -675,7 +683,7 @@ class IcePlatform extends Platform {
     }
 
     static get maxTime() {
-        return 500 * STEPS_PER_MILISECOND;
+        return 400 * STEPS_PER_MILISECOND;
     }
 }
 
