@@ -1,6 +1,6 @@
 import { soundPlayer } from "./Audio";
 import { getBackground as getBackground } from "./Background";
-import { WORLD_SIZE, GRAVITY, TERMINAL_VELOCITY, STEPS_PER_MILISECOND, SPEED_UNIT, scene as scene, context, keyboard, JUMP_SPEED, ACCELERATION_UNIT, TAU, random } from "./Globals";
+import { WORLD_SIZE, GRAVITY, TERMINAL_VELOCITY, STEPS_PER_MILISECOND, SPEED_UNIT, scene as scene, context, keyboard, JUMP_SPEED, ACCELERATION_UNIT, TAU, random, canvas } from "./Globals";
 import { LocalStorage } from "./LocalStorage";
 import { activateMenu, fadeInTransition, fadeOutTransition, waitNextFrame } from "./Main";
 
@@ -940,7 +940,7 @@ export const createGame = ({rockets = false}) => {
     const animate = (currentTime: number) => {
         state.updateScore();
 
-        background.draw(context, state.backgroundY);
+        background.draw(context, state.backgroundY, canvas.width, canvas.height);
         render(state);
 
         const timeGap = min(500, currentTime - state.previousTime + gameTimeGap);

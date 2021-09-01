@@ -173,6 +173,14 @@ export const createBackgroundPattern = () => {
         context.restore();
 
         patternCanvas.getContext('2d').drawImage(incrementCanvas, 0, filledScreens * patternSize * patternScale);
+        /*
+        const patternContext = patternCanvas.getContext('2d');
+        patternContext.fillStyle = 'blue';
+        patternContext.fillRect(0, filledScreens * patternScale * patternSize, 50, 50);
+        patternContext.fillStyle = 'red';
+        patternContext.fillRect(0, (filledScreens + 1) * patternScale * patternSize - 50, 50, 50);
+        //*/
+
         filledScreens++;
     };
 
@@ -182,11 +190,11 @@ export const createBackgroundPattern = () => {
         increment,
         getHeight,
         canvas: patternCanvas,
-        draw: (context: CanvasRenderingContext2D, yOffset: number) => {
-            const realOffset = yOffset % getHeight();
-            context.drawImage(patternCanvas, 0, realOffset - getHeight());
-            context.drawImage(patternCanvas, 0, realOffset);
-            patternCanvas
+        draw: (context: CanvasRenderingContext2D, yOffset: number, width: number, height: number) => {
+            const relativeHeight = getHeight() * width / patternCanvas.width;
+            for (let offset = (-10000 * relativeHeight + yOffset) % relativeHeight; offset < height; offset += relativeHeight) {
+                context.drawImage(patternCanvas, 0, 0, patternCanvas.width, getHeight(), 0, offset, width, relativeHeight);
+            }
         }
     };
 };

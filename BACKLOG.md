@@ -1,4 +1,3 @@
-render background according to screen size
 add music
 add alternative controls for mobile
 add enemy (alien)?

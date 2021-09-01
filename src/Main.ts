@@ -1,7 +1,7 @@
 import { soundPlayer } from "./Audio";
 import { getBackground } from "./Background";
 import { createGame, Player } from "./Game";
-import { context, keyboard, keyboardMap, random, scene, TAU, WORLD_SIZE } from "./Globals";
+import { canvas, context, keyboard, keyboardMap, random, scene, TAU, WORLD_SIZE } from "./Globals";
 import { LocalStorage } from "./LocalStorage";
 
 const resize = () => {
@@ -122,10 +122,10 @@ export const activateMenu = () => {
     player.position.x = 250;
     player.position.y = 400;
 
-    let backgroundY = background.getHeight() * random();
+    let backgroundY = 0; // background.getHeight() * random();
     let previousTime = null;
     const renderBackground = (time: number) => {
-        background.draw(context, backgroundY);
+        background.draw(context, backgroundY, canvas.width, canvas.height);
 
         context.save();
         context.translate(window.innerWidth / 2, window.innerHeight / 2);
@@ -157,7 +157,6 @@ const deactivateMenu = () => {
     disableCursor();
     menuActive = false;
     activeScreen = null;
-    document.querySelector<HTMLDivElement>('#menu').style.display = 'none';
 };
 
 const updateAudioText = () => {
@@ -187,27 +186,39 @@ const waitForConsistentAnimation = async () => {
     } while (--maxTries > 0 && sequence < 5);
 };
 
-let nextFadeId = 0;
+let activeFade: Promise<void> | null = null;
 export const fadeInTransition = async (ms: number = 500) => {
-    const fadeTransition = document.querySelector<HTMLDivElement>('#fade-transition');
-    const fadeId = ++nextFadeId;
-    await waitForConsistentAnimation();
-    fadeTransition.style.transition = `opacity ${ms}ms`;
-    await waitRelayout();
-    fadeTransition.classList.remove('visible');
-    await wait(ms);
-    if (fadeId === nextFadeId) {
-        fadeTransition.style.zIndex = '-1';
+    while (activeFade) {
+        await activeFade;
     }
+
+    return activeFade = new Promise(async (resolve) => {
+        const fadeTransition = document.querySelector<HTMLDivElement>('#fade-transition');
+        await waitForConsistentAnimation();
+        fadeTransition.style.transition = `opacity ${ms}ms`;
+        await waitRelayout();
+        fadeTransition.classList.remove('visible');
+        await wait(ms);
+        fadeTransition.style.zIndex = '-1';
+        activeFade = null;
+        resolve();
+    });
 };
 
 export const fadeOutTransition = async (ms: number = 500) => {
-    const fadeTransition = document.querySelector<HTMLDivElement>('#fade-transition');
-    const fadeId = ++nextFadeId;
-    fadeTransition.style.transition = `opacity ${ms}ms`;
-    fadeTransition.classList.add('visible');
-    fadeTransition.style.zIndex = '1';
-    await wait(ms);
+    while (activeFade) {
+        await activeFade;
+    }
+
+    return activeFade = new Promise(async (resolve) => {
+        const fadeTransition = document.querySelector<HTMLDivElement>('#fade-transition');
+        fadeTransition.style.transition = `opacity ${ms}ms`;
+        fadeTransition.classList.add('visible');
+        fadeTransition.style.zIndex = '1';
+        await wait(ms);
+        activeFade = null;
+        resolve();
+    });
 };
 
 let cursor: HTMLCanvasElement;
@@ -318,25 +329,35 @@ document.addEventListener('DOMContentLoaded', () => {
         fadeInTransition(500);
     };
 
+    const requestFullscreen = async () => {
+        if (body.webkitEnterFullScreen) {
+            await body.webkitEnterFullScreen();
+        } else {
+            await body.requestFullscreen();
+        }
+        LocalStorage.update(storage => storage.fullscreen = true);
+    };
+
     document.querySelector('#audio').addEventListener('click', () => {
         setAudioActive(!soundPlayer.enabled);
     });
 
-    document.querySelector('#fullscreen').addEventListener('click', () => {
+    document.querySelector('#fullscreen').addEventListener('click', async () => {
         if (document.fullscreenElement) {
             document.exitFullscreen();
         } else {
-            body.requestFullscreen();
+            requestFullscreen();
         }
     });
 
     const startGame = async (params = {}) => {
         deactivateMenu();
         await fadeOutTransition();
+        document.querySelector<HTMLDivElement>('#menu').style.display = 'none';
         soundPlayer.buildSamples();
         activeGame = createGame(params);
         activeGame.start();
-        await fadeInTransition(5000);
+        await fadeInTransition(3000);
     };
 
     document.querySelector('#start').addEventListener('click', () => startGame());
@@ -371,17 +392,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('#fullscreen--yes').addEventListener('click', async () => {
         await closeFullScreen();
         try {
-            if (body.webkitEnterFullScreen) {
-                await body.webkitEnterFullScreen();
-            } else {
-                await body.requestFullscreen();
-            }
+            await requestFullscreen();
         } catch (error) {
             console.error(error);
         }
     });
 
     const closeFullScreen = async () => {
+        activeScreen = null;
         await fadeOutTransition();
         getBackground().increment();
         document.querySelector('#fullscreen-question').remove();
@@ -389,6 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const closeAudio = async () => {
+        activeScreen = null;
         await fadeOutTransition();
         getBackground().increment();
         document.querySelector('#audio-question').remove();
