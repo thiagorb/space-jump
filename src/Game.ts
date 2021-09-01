@@ -9,7 +9,7 @@ interface Vector2D {
     y: number;
 }
 
-const { cos, sin, max, min, abs, PI } = Math;
+const { cos, sin, max, min, abs, round, PI } = Math;
 const sign = (value: number): (-1 | 0 | 1) => value > 0 ? 1: (value < 0 ? -1 : 0);
 const between = (lower: number, upper: number, value: number) => max(lower, min(upper, value));
 
@@ -165,55 +165,81 @@ const enum AnimationProperty {
     ArmsRotation = 1,
 }
 
-type Animation = Array<{[property: number]: number} | {goTo: string}>
+const enum AnimationId {
+    Rest = 0,
+    Run = 1,
+    Jump = 2,
+    Falling = 3,
+    Rising = 4,
+};
 
-const restAnimation: Animation = [
-    {
-        [AnimationProperty.LegsRotation]: -PI / 2 - 0.1,
-        [AnimationProperty.ArmsRotation]: -PI / 2 - 0.1
-    },
-];
+type AnimationFrames = Array<{[property: number]: number} | {goTo: AnimationId}>
 
-const runAnimation: Animation = [
-    {
-        [AnimationProperty.LegsRotation]: -PI / 2 - 0.6,
-        [AnimationProperty.ArmsRotation]: -PI / 2 + 0.6
-    },
-    {
-        [AnimationProperty.LegsRotation]: -PI / 2 + 0.6,
-        [AnimationProperty.ArmsRotation]: -PI / 2 - 0.6
-    },
-];
+const animationsList: Array<[AnimationId, AnimationFrames]> = [
+    [
+        AnimationId.Rest,
+        [
+            {
+                [AnimationProperty.LegsRotation]: -PI / 2 - 0.1,
+                [AnimationProperty.ArmsRotation]: -PI / 2 - 0.1
+            },
+        ]
+    ],
 
-const jumpAnimation: Animation = [
-    {
-        [AnimationProperty.LegsRotation]: -PI / 2 - 0.8,
-        [AnimationProperty.ArmsRotation]: -PI / 2 + 1.2
-    },
-    { goTo: 'fallingAnimation' },
-];
+    [
+        AnimationId.Run,
+        [
+            {
+                [AnimationProperty.LegsRotation]: -PI / 2 - 0.6,
+                [AnimationProperty.ArmsRotation]: -PI / 2 + 0.6
+            },
+            {
+                [AnimationProperty.LegsRotation]: -PI / 2 + 0.6,
+                [AnimationProperty.ArmsRotation]: -PI / 2 - 0.6
+            },
+        ]
+    ],
 
-const fallingAnimation = [
-    {
-        [AnimationProperty.LegsRotation]: -PI / 2 - 0.2,
-        [AnimationProperty.ArmsRotation]: -PI / 2 - 2.2
-    },
-    {
-        [AnimationProperty.LegsRotation]: -PI / 2 - 0.3,
-        [AnimationProperty.ArmsRotation]: -PI / 2 - 2.5
-    },
-];
+    [
+        AnimationId.Jump,
+        [
+            {
+                [AnimationProperty.LegsRotation]: -PI / 2 - 0.8,
+                [AnimationProperty.ArmsRotation]: -PI / 2 + 1.2
+            },
+            { goTo: AnimationId.Falling },
+        ]
+    ],
 
-const risingAnimation = [
-    {
-        [AnimationProperty.LegsRotation]: -PI / 2 - 0.1,
-        [AnimationProperty.ArmsRotation]: -PI / 2 - 0.1
-    },
-    {
-        [AnimationProperty.LegsRotation]: -PI / 2 - 0.3,
-        [AnimationProperty.ArmsRotation]: -PI / 2 - 0.3
-    },
+    [
+        AnimationId.Falling,
+        [
+            {
+                [AnimationProperty.LegsRotation]: -PI / 2 - 0.2,
+                [AnimationProperty.ArmsRotation]: -PI / 2 - 2.2
+            },
+            {
+                [AnimationProperty.LegsRotation]: -PI / 2 - 0.3,
+                [AnimationProperty.ArmsRotation]: -PI / 2 - 2.5
+            },
+        ],
+    ],
+
+    [
+        AnimationId.Rising,
+        [
+            {
+                [AnimationProperty.LegsRotation]: -PI / 2 - 0.1,
+                [AnimationProperty.ArmsRotation]: -PI / 2 - 0.1
+            },
+            {
+                [AnimationProperty.LegsRotation]: -PI / 2 - 0.3,
+                [AnimationProperty.ArmsRotation]: -PI / 2 - 0.3
+            },
+        ]
+    ]
 ];
+const animations = new Map<AnimationId, AnimationFrames>(animationsList);
 
 export class Player extends GameObject {
     speed: Vector2D = {x: 0, y: 0};
@@ -246,17 +272,18 @@ export class Player extends GameObject {
         [AnimationProperty.ArmsRotation]: 0.12,
     };
 
-    animation: Animation = restAnimation;
+    animation: AnimationId = AnimationId.Rest;
     currentFrame = 0;
 
     updateAnimation() {
-        if (this.currentFrame >= this.animation.length) {
+        const animation = animations.get(this.animation);
+        if (this.currentFrame >= animation.length) {
             this.currentFrame = 0;
         }
 
-        const frame = this.animation[this.currentFrame];
+        const frame = animation[this.currentFrame];
         if ('goTo' in frame) {
-            this.animation = this[frame.goTo];
+            this.animation = frame.goTo;
             this.currentFrame = 0;
         }
 
@@ -362,18 +389,18 @@ export class Player extends GameObject {
         if (!state.ending && keyboard.arrowLeft) {
             state.player.speed.x = max(-maxHorizontalSpeed, state.player.speed.x - horizontalAccel);
             state.player.direction = -1;
-            state.player.animation = runAnimation;
+            state.player.animation = AnimationId.Run;
         } else if (!state.ending && keyboard.arrowRight) {
             state.player.speed.x = min(maxHorizontalSpeed, state.player.speed.x + horizontalAccel);
             state.player.direction = 1;
-            state.player.animation = runAnimation;
+            state.player.animation = AnimationId.Run;
         } else {
             state.player.speed.x = abs(state.player.speed.x) > horizontalAccel
                 ? state.player.speed.x - sign(state.player.speed.x) * horizontalAccel
                 : 0;
 
             if (state.onPlatform) {
-                state.player.animation = restAnimation;
+                state.player.animation = AnimationId.Rest;
             }
         }
 
@@ -386,7 +413,7 @@ export class Player extends GameObject {
         if ((state.onPlatform || this.jumpGrace > 0) && !state.ending && keyboard.arrowUp) {
             this.jumpGrace = 0;
             state.player.speed.y = -JUMP_SPEED;
-            state.player.animation = jumpAnimation;
+            state.player.animation = AnimationId.Jump;
             state.player.currentFrame = 0;
             soundPlayer.playJump();
         }
@@ -396,12 +423,12 @@ export class Player extends GameObject {
         } else {
             this.jumpGrace = max(0, this.jumpGrace - 1);
             if (state.player.speed.y > 0) {
-                state.player.animation = fallingAnimation;
-            } else if (state.player.animation !== jumpAnimation) {
+                state.player.animation = AnimationId.Falling;
+            } else if (state.player.animation !== AnimationId.Jump) {
                 if (state.player.rocket) {
-                    state.player.animation = risingAnimation;
+                    state.player.animation = AnimationId.Rising;
                 } else {
-                    state.player.animation = restAnimation;
+                    state.player.animation = AnimationId.Rest;
                 }
             }
         }
@@ -416,6 +443,9 @@ export class Player extends GameObject {
 }
 
 abstract class InteractiveObject extends GameObject {
+    id: number;
+    layer: number;
+
     abstract render(context: CanvasRenderingContext2D): void;
     tick(state: GameState) { }
     preTick(state: GameState) { }
@@ -485,7 +515,7 @@ class Rocket extends InteractiveObject {
 
     tick(state: GameState) {
         if (this.position.y > state.screenArea.bottom + WORLD_SIZE) {
-            state.objects.delete(this);
+            state.removeObject(this);
         }
 
         if (!state.ending && this.boundBoxCollision(state.player)) {
@@ -513,7 +543,7 @@ abstract class Platform extends InteractiveObject {
     abstract render(context: CanvasRenderingContext2D): void;
     tick(state: GameState) {
         if (this.position.y > state.screenArea.bottom + WORLD_SIZE) {
-            state.objects.delete(this);
+            state.removeObject(this);
         }
     }
 
@@ -530,7 +560,13 @@ abstract class Platform extends InteractiveObject {
 }
 
 class StaticPlatform extends Platform {
-    render = (() => {
+    private static sprite = (() => {
+        const canvas = document.createElement('canvas');
+        const scale = 4;
+        canvas.width = Platform.width * scale;
+        canvas.height = (Platform.height + 20) * scale;
+        const context = canvas.getContext('2d');
+
         const linear = context.createLinearGradient(-1, 0, 1, 0);
         linear.addColorStop(0.1, '#bbb');
         linear.addColorStop(0.2, '#fff');
@@ -549,43 +585,48 @@ class StaticPlatform extends Platform {
         radial2.addColorStop(0.5, `rgba(120, 120, 120, 1.0)`);
         radial2.addColorStop(1, `rgba(160, 160, 160, 1.0)`);
 
-        return (context: CanvasRenderingContext2D) => {
-            context.save();
-            context.translate(this.position.x, this.position.y);
+        context.save();
+        context.scale(scale, scale);
+        context.translate(0, 10);
 
-            // Start bottom and middle
-            context.save();
-            context.translate(Platform.width / 2, Platform.height / 2 + 20);
-            context.scale(Platform.width / 2, Platform.height / 2);
-            context.beginPath();
-            context.rect(-1, -3, 2, 2);
-            context.ellipse(0, -1, 1, 1, 0, 0, TAU);
-            context.clip();
-            context.fillStyle = linear;
-            context.fillRect(-1, -3, 2, 10);
+        // Start bottom and middle
+        context.save();
+        context.translate(Platform.width / 2, Platform.height / 2 + 20);
+        context.scale(Platform.width / 2, Platform.height / 2);
+        context.beginPath();
+        context.rect(-1, -3, 2, 2);
+        context.ellipse(0, -1, 1, 1, 0, 0, TAU);
+        context.clip();
+        context.fillStyle = linear;
+        context.fillRect(-1, -3, 2, 10);
 
-            context.fillStyle = linearRot;
-            context.fillRect(-1, -2, 2, 10);
+        context.fillStyle = linearRot;
+        context.fillRect(-1, -2, 2, 10);
 
-            context.restore();
-            // End bottom and middle
+        context.restore();
+        // End bottom and middle
 
-            // Start top
-            context.save();
-            context.translate(Platform.width / 2, Platform.height / 2 - 10);
-            context.scale(Platform.width / 2, Platform.height / 2);
-            context.fillStyle = radial2;
+        // Start top
+        context.save();
+        context.translate(Platform.width / 2, Platform.height / 2 - 10);
+        context.scale(Platform.width / 2, Platform.height / 2);
+        context.fillStyle = radial2;
 
-            context.beginPath();
-            context.ellipse(0, 0, 1, 1, 0, 0, TAU);
-            context.closePath();
-            context.fill();
-            context.restore();
-            // End top
+        context.beginPath();
+        context.ellipse(0, 0, 1, 1, 0, 0, TAU);
+        context.closePath();
+        context.fill();
+        context.restore();
+        // End top
 
-            context.restore();
-        };
+        context.restore();
+
+        return canvas;
     })();
+
+    render(context: CanvasRenderingContext2D) {
+        context.drawImage(StaticPlatform.sprite, this.position.x, this.position.y - 10, Platform.width, Platform.height + 20);
+    }
 }
 
 class IcePlatform extends Platform {
@@ -593,7 +634,13 @@ class IcePlatform extends Platform {
     disappearing: boolean = false;
 
 
-    render = (() => {
+    private static sprite = (() => {
+        const canvas = document.createElement('canvas');
+        const scale = 4;
+        canvas.width = Platform.width * scale;
+        canvas.height = (Platform.height + 40) * scale;
+        const context = canvas.getContext('2d');
+
         const radial = context.createRadialGradient(0, 0, 0, 0, 0, 1);
         radial.addColorStop(0.5, `rgba(255, 255, 255, 0.0)`);
         radial.addColorStop(1, `rgba(255, 255, 255, 0.2)`);
@@ -616,57 +663,63 @@ class IcePlatform extends Platform {
         radial2.addColorStop(0.5, `rgba(255, 255, 255, 0.0)`);
         radial2.addColorStop(1, `rgba(255, 255, 255, 0.7)`);
 
-        return (context: CanvasRenderingContext2D) => {
-            context.save();
-            context.translate(this.position.x, this.position.y);
-            context.globalAlpha = this.time / IcePlatform.maxTime;
+        context.save();
+        context.scale(scale, scale);
+        context.translate(0, 10);
 
-            // Start bottom and middle
-            context.save();
-            context.translate(this.width / 2, this.height / 2 + 20);
-            context.scale(this.width / 2, this.height / 2);
-            context.fillStyle = radial;
+        // Start bottom and middle
+        context.save();
+        context.translate(Platform.width / 2, Platform.height / 2 + 20);
+        context.scale(Platform.width / 2, Platform.height / 2);
+        context.fillStyle = radial;
 
-            context.beginPath();
-            context.ellipse(0, 0, 1, 1, 0, 0, TAU);
-            context.fill();
+        context.beginPath();
+        context.ellipse(0, 0, 1, 1, 0, 0, TAU);
+        context.fill();
 
-            context.beginPath();
-            context.rect(-1, -3, 2, 3);
-            context.ellipse(0, 0, 1, 1, 0, 0, TAU);
-            context.clip();
+        context.beginPath();
+        context.rect(-1, -3, 2, 3);
+        context.ellipse(0, 0, 1, 1, 0, 0, TAU);
+        context.clip();
 
-            context.fillStyle = linear;
-            context.fillRect(-1, -3, 2, 10);
+        context.fillStyle = linear;
+        context.fillRect(-1, -3, 2, 10);
 
-            context.fillStyle = linearRot;
-            context.fillRect(-1, -3, 2, 10);
+        context.fillStyle = linearRot;
+        context.fillRect(-1, -3, 2, 10);
 
-            context.restore();
-            // End bottom and middle
+        context.restore();
+        // End bottom and middle
 
-            // Start top
-            context.save();
-            context.translate(this.width / 2, this.height / 2 - 10);
-            context.scale(this.width / 2, this.height / 2);
-            context.fillStyle = radial2;
+        // Start top
+        context.save();
+        context.translate(Platform.width / 2, Platform.height / 2 - 10);
+        context.scale(Platform.width / 2, Platform.height / 2);
+        context.fillStyle = radial2;
 
-            context.beginPath();
-            context.ellipse(0, 0, 1, 1, 0, 0, TAU);
-            context.fill();
-            context.restore();
-            // End top
+        context.beginPath();
+        context.ellipse(0, 0, 1, 1, 0, 0, TAU);
+        context.fill();
+        context.restore();
+        // End top
 
-            context.restore();
-        };
+        context.restore();
+
+        return canvas;
     })();
+
+    render(context: CanvasRenderingContext2D) {
+        context.globalAlpha = this.time / IcePlatform.maxTime;
+        context.drawImage(IcePlatform.sprite, this.position.x, this.position.y - 10, Platform.width, Platform.height + 40);
+        context.globalAlpha = 1;
+    }
 
     tick(state: GameState) {
         super.tick(state);
 
         if (this.disappearing) {
             if (this.time <= 0) {
-                state.objects.delete(this);
+                state.removeObject(this);
             } else {
                 this.time -= 1;
             }
@@ -688,37 +741,54 @@ class IcePlatform extends Platform {
 }
 
 class MovingPlatform extends Platform {
+    private static lightSprites = (() => {
+        const colors = [
+            {red: 255, green: 0, blue: 0},
+            {red: 255, green: 255, blue: 0},
+            {red: 0, green: 0, blue: 255},
+        ];
+
+        return colors.map(({red, green, blue}) => {
+            const lightCanvas = document.createElement('canvas');
+            const side = 50;
+            lightCanvas.width = side;
+            lightCanvas.height = side;
+            const lightContext = lightCanvas.getContext('2d');
+
+            const gradient = lightContext.createRadialGradient(0, 0, 0, 0, 0, 1);
+            gradient.addColorStop(0, `rgba(${red}, ${green}, ${blue}, 0.9)`);
+            gradient.addColorStop(0.1, `rgba(${red}, ${green}, ${blue}, 0.7)`);
+            gradient.addColorStop(0.2, `rgba(${red}, ${green}, ${blue}, 0.2)`);
+            gradient.addColorStop(1, `rgba(${red}, ${green}, ${blue}, 0)`);
+
+            lightContext.save();
+            lightContext.translate(side / 2, side / 2);
+            lightContext.scale(side / 2, side / 2);
+            lightContext.fillStyle = gradient;
+            lightContext.beginPath();
+            lightContext.arc(0, 0, 1, 0, TAU);
+            lightContext.fill();
+            lightContext.restore();
+
+            return lightCanvas;
+        });
+    })();
+    private static lightsAngle = Math.PI * 2 / MovingPlatform.lightSprites.length;
+
+
     direction: number = 1;
 
     render = (() => {
-        const createLightGradient = ({ red, green, blue }) => {
-            const light = context.createRadialGradient(0, 0, 0, 0, 0, 1);
-            light.addColorStop(0, `rgba(${red}, ${green}, ${blue}, 0.9)`);
-            light.addColorStop(0.1, `rgba(${red}, ${green}, ${blue}, 0.7)`);
-            light.addColorStop(0.2, `rgba(${red}, ${green}, ${blue}, 0.2)`);
-            light.addColorStop(1, `rgba(${red}, ${green}, ${blue}, 0)`);
-            return light;
-        };
-
         let lightRotation: number = 0;
-        const lights = [
-            {gradient: createLightGradient({red: 255, green: 0, blue: 0}), direction: 0},
-            {gradient: createLightGradient({red: 255, green: 255, blue: 0}), direction: TAU / 3},
-            {gradient: createLightGradient({red: 0, green: 0, blue: 255}), direction: 4 * PI / 3},
-        ];
 
-        const renderLight = (light: typeof lights[0]) => {
-            const direction = light.direction + lightRotation;
+        const renderLight = (sprite: typeof MovingPlatform.lightSprites[0], lightDirection: number) => {
+            const direction = lightDirection + lightRotation;
             context.save();
             context.translate(
                 this.width / 2 + (this.width * cos(direction)) / 2,
                 this.height / 2 - 5 + (this.height * sin(direction)) / 2,
             );
-            context.scale(20, 20);
-            context.fillStyle = light.gradient;
-            context.beginPath();
-            context.arc(0, 0, 1, 0, TAU);
-            context.fill();
+            context.drawImage(sprite, 0, 0, sprite.width, sprite.height, -20, -20, 40, 40);
             context.restore();
         };
 
@@ -726,9 +796,10 @@ class MovingPlatform extends Platform {
             context.save();
             context.translate(this.position.x, this.position.y);
 
-            for (const light of lights) {
-                if ((light.direction + lightRotation) % TAU >= PI) {
-                    renderLight(light);
+            for (let i = MovingPlatform.lightSprites.length; i--; ) {
+                const lightDirection = MovingPlatform.lightsAngle * i;
+                if ((lightDirection + lightRotation) % TAU >= PI) {
+                    renderLight(MovingPlatform.lightSprites[i], lightDirection);
                 }
             }
 
@@ -747,9 +818,10 @@ class MovingPlatform extends Platform {
             context.ellipse(this.width / 2, this.height / 2 - 10, this.width / 2, this.height / 2, 0, 0, TAU);
             context.fill();
 
-            for (const light of lights) {
-                if ((light.direction + lightRotation) % TAU < PI) {
-                    renderLight(light);
+            for (let i = MovingPlatform.lightSprites.length; i--; ) {
+                const lightDirection = MovingPlatform.lightsAngle * i;
+                if ((lightDirection + lightRotation) % TAU < PI) {
+                    renderLight(MovingPlatform.lightSprites[i], lightDirection);
                 }
             }
 
@@ -784,7 +856,7 @@ class GameState {
     over: boolean = false;
     previousTime: number = 0;
     player: Player = new Player();
-    objects: Set<InteractiveObject> = new Set();
+    objectLayers: Array<Array<InteractiveObject>> = [[], []];
     screenArea: ScreenArea = new ScreenArea();
     nextPlatformTop: number = 0;
     previousPlatformX: number = 0;
@@ -801,8 +873,11 @@ class GameState {
         }
 
         this.onPlatform = null;
-        for (const object of this.objects) {
-            object.preTick(this);
+        for (let layerIndex = this.objectLayers.length; layerIndex--; ) {
+            const layer = this.objectLayers[layerIndex];
+            for (let objectIndex = layer.length; objectIndex--; ) {
+                layer[objectIndex].preTick(this);
+            }
         }
 
         if (this.ignorePlatform) {
@@ -822,7 +897,7 @@ class GameState {
                 platform = new StaticPlatform();
             }
 
-            this.objects.add(platform);
+            this.addObject(platform);
             platform.position.x = between(0, WORLD_SIZE - platform.width, this.previousPlatformX + (0.5 - random()) * 500);
             platform.position.y = this.nextPlatformTop;
             this.previousPlatformX = platform.position.x;
@@ -832,14 +907,18 @@ class GameState {
                 const rocket = new Rocket();
                 rocket.position.x = platform.left + (platform.width - rocket.width) * random();
                 rocket.position.y = platform.top - rocket.height;
-                this.objects.add(rocket);
+                this.addObject(rocket, 0);
             }
         }
 
         this.player.tick(this);
 
-        for (const object of this.objects) {
-            object.tick(this);
+
+        for (let layerIndex = this.objectLayers.length; layerIndex--; ) {
+            const layer = this.objectLayers[layerIndex];
+            for (let objectIndex = layer.length; objectIndex--; ) {
+                layer[objectIndex].tick(this);
+            }
         }
 
         if (this.screenArea.speedBoost < 0) {
@@ -858,6 +937,22 @@ class GameState {
     updateScore() {
         if (!this.ending) {
             this.score = -Math.round(this.screenArea.top / 100);
+        }
+    }
+
+    addObject(object: InteractiveObject, layerIndex: number = 1) {
+        const layer = this.objectLayers[layerIndex];
+        layer.push(object);
+        object.id = layer.length;
+        object.layer = layerIndex;
+    }
+
+    removeObject(object: InteractiveObject) {
+        const layer = this.objectLayers[object.layer];
+        const last = layer.pop();
+        if (object !== last) {
+            last.id = object.id;
+            layer[object.id - 1] = last;
         }
     }
 }
@@ -886,9 +981,11 @@ const render = (state: GameState) => {
 
     context.translate(-state.screenArea.left, -state.screenArea.top);
 
-    // render objects
-    for (const object of state.objects) {
-        object.render(context);
+    for (let layerIndex = state.objectLayers.length; layerIndex--; ) {
+        const layer = state.objectLayers[layerIndex];
+        for (let objectIndex = layer.length; objectIndex--; ) {
+            layer[objectIndex].render(context);
+        }
     }
     state.player.render(context);
 
@@ -931,7 +1028,7 @@ export const createGame = ({rockets = false}) => {
 
     {
         const platform = new StaticPlatform();
-        state.objects.add(platform);
+        state.addObject(platform);
         platform.position.x = (WORLD_SIZE - platform.width) / 2;
         platform.position.y = 200;
         state.previousPlatformX = platform.position.x;
@@ -1017,3 +1114,7 @@ setInterval(() => {
     fpsCounter = 0;
 }, 1000);
 */
+
+onerror = (error) => {
+    alert(error.toString());
+};
