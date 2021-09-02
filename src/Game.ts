@@ -97,8 +97,8 @@ export class IntContext {
                 image,
                 this.xCoordinate(x1, y1),
                 this.yCoordinate(x1, y1),
-                round(dw1 * this.state.scale),
-                round(dh1 * this.state.scale)
+                dw1 * this.state.scale | 0,
+                dh1 * this.state.scale | 0
             );
             return;
         }
@@ -107,10 +107,10 @@ export class IntContext {
             x1, y1,
             dw1,
             dh1,
-            x2 && this.xCoordinate(x2, y2),
-            y2 && this.yCoordinate(x2, y2),
-            dw2 && round(dw2 * this.state.scale),
-            dh2 && round(dh2 * this.state.scale)
+            this.xCoordinate(x2, y2),
+            this.yCoordinate(x2, y2),
+            dw2 * this.state.scale | 0,
+            dh2 * this.state.scale | 0
         );
     }
 
@@ -138,8 +138,8 @@ export class IntContext {
         this.context.fillRect(
             this.xCoordinate(x, y),
             this.yCoordinate(x, y),
-            round(width * this.state.scale),
-            round(height * this.state.scale)
+            width * this.state.scale | 0,
+            height * this.state.scale | 0
         );
     }
 
@@ -147,8 +147,8 @@ export class IntContext {
         this.context.rect(
             this.xCoordinate(x, y),
             this.yCoordinate(x, y),
-            round(width * this.state.scale),
-            round(height * this.state.scale)
+            width * this.state.scale | 0,
+            height * this.state.scale | 0
         );
     }
 
@@ -156,7 +156,7 @@ export class IntContext {
         this.context.arc(
             this.xCoordinate(x, y),
             this.yCoordinate(x, y),
-            round(radius * this.state.scale),
+            radius * this.state.scale | 0,
             start,
             end
         );
@@ -166,8 +166,8 @@ export class IntContext {
         this.context.ellipse(
             this.xCoordinate(x, y),
             this.yCoordinate(x, y),
-            round(radiusX * this.state.scale),
-            round(radiusY * this.state.scale),
+            radiusX * this.state.scale | 0,
+            radiusY * this.state.scale | 0,
             rotation,
             startAngle,
             endAngle
@@ -175,11 +175,11 @@ export class IntContext {
     }
 
     xCoordinate(x: number, y: number): number {
-        return round(this.state.x + this.state.scale * (x * this.state.cos + y * this.state.sin));
+        return this.state.x + this.state.scale * (x * this.state.cos + y * this.state.sin) | 0;
     }
 
     yCoordinate(x: number, y: number): number {
-        return round(this.state.y + this.state.scale * (y * this.state.sin90 + x * this.state.cos90));
+        return this.state.y + this.state.scale * (y * this.state.sin90 + x * this.state.cos90) | 0;
     }
 
     set strokeStyle(value: string) {
@@ -199,7 +199,7 @@ export class IntContext {
     }
 
     set lineWidth(value: number) {
-        this.context.lineWidth = round(value * this.state.scale);
+        this.context.lineWidth = value * this.state.scale | 0;
     }
 
     set globalAlpha(value: number) {
@@ -234,7 +234,7 @@ export class IntContext {
     }
 
     setFont(weight: number, size: number, family: string): void {
-        this.context.font = `${weight} ${round(size * this.state.scale)}px ${family}`;
+        this.context.font = `${weight} ${size * this.state.scale | 0}px ${family}`;
     }
 }
 
@@ -243,7 +243,7 @@ interface Vector2D {
     y: number;
 }
 
-const { cos, sin, max, min, abs, round, PI } = Math;
+const { cos, sin, max, min, abs, PI } = Math;
 const sign = (value: number): (-1 | 0 | 1) => value > 0 ? 1: (value < 0 ? -1 : 0);
 const between = (lower: number, upper: number, value: number) => max(lower, min(upper, value));
 
@@ -374,8 +374,8 @@ const rocketParticles = () => {
 
                 context.fillStyle = colors[particle.time];
                 context.beginPath();
-                const radius = Math.round(25 * (1 - abs(0.3 - progress)));
-                context.arc(Math.round(particle.x), Math.round(particle.y), radius, 0, TAU);
+                const radius = 25 * (1 - abs(0.3 - progress));
+                context.arc(particle.x, particle.y, radius, 0, TAU);
 
                 context.closePath();
                 context.fill();
@@ -750,6 +750,7 @@ class Rocket extends InteractiveObject {
             soundPlayer.playRocket();
             state.player.speed.y = -1.5 * JUMP_SPEED;
             state.player.rocket = true;
+            state.player.jumpGrace = 0;
 
             const deltaY = 1 - (state.player.top - state.screenArea.top) / WORLD_SIZE;
             state.screenArea.speedBoost = min(0, -1.6 * deltaY * JUMP_SPEED    );
@@ -1170,7 +1171,7 @@ class GameState {
 
     updateScore() {
         if (!this.ending) {
-            this.score = -Math.round(this.screenArea.top / 100);
+            this.score = -(this.screenArea.top / 100 | 0);
         }
     }
 
