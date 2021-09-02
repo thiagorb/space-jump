@@ -34,6 +34,3 @@ export const keyboardMap: Map<string, keyof typeof keyboard> = new Map([
     ['KeyD', 'arrowRight'],
     ['Enter', 'enter'],
 ]);
-
-context.imageSmoothingEnabled = false;
-context.imageSmoothingQuality = 'low';

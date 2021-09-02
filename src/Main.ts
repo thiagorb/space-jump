@@ -1,6 +1,6 @@
 import { soundPlayer } from "./Audio";
 import { getBackground } from "./Background";
-import { createGame, Player } from "./Game";
+import { createGame, IntContext, Player } from "./Game";
 import { canvas, context, keyboard, keyboardMap, random, scene, TAU, WORLD_SIZE } from "./Globals";
 import { LocalStorage } from "./LocalStorage";
 
@@ -124,16 +124,17 @@ export const activateMenu = () => {
 
     let backgroundY = 0; // background.getHeight() * random();
     let previousTime = null;
+    const intContext = new IntContext(context);
     const renderBackground = (time: number) => {
         background.draw(context, backgroundY, canvas.width, canvas.height);
 
-        context.save();
-        context.translate(window.innerWidth / 2, window.innerHeight / 2);
-        context.scale(scene.scale, scene.scale);
-        context.translate(-WORLD_SIZE / 2, -WORLD_SIZE / 2);
+        intContext.save();
+        intContext.translate(window.innerWidth / 2, window.innerHeight / 2);
+        intContext.scale(scene.scale);
+        intContext.translate(-WORLD_SIZE / 2, -WORLD_SIZE / 2);
 
-        player.render(context);
-        context.restore();
+        player.render(intContext);
+        intContext.restore();
 
         if (previousTime) {
             backgroundY += (time - previousTime) * 0.01;

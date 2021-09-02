@@ -4,6 +4,240 @@ import { WORLD_SIZE, GRAVITY, TERMINAL_VELOCITY, STEPS_PER_MILISECOND, SPEED_UNI
 import { LocalStorage } from "./LocalStorage";
 import { activateMenu, fadeInTransition, fadeOutTransition, waitNextFrame } from "./Main";
 
+class IntContextState {
+    public x: number = 0;
+    public y: number = 0;
+    public scale: number = 1;
+    private _rotation: number = 0;
+    private _cos: number = 1;
+    private _sin: number = 0;
+    private _cos90: number = 0;
+    private _sin90: number = 1;
+
+    copyTo(other: IntContextState) {
+        other.x = this.x;
+        other.y = this.y;
+        other.scale = this.scale;
+        other._rotation = this._rotation;
+        other._cos = this._cos;
+        other._sin = this._sin;
+        other._cos90 = this._cos90;
+        other._sin90 = this._sin90;
+    }
+
+    set rotation(value: number) {
+        this._rotation = value;
+        this._cos = null;
+        this._sin = null;
+        this._cos90 = null;
+        this._sin90 = null;
+    }
+
+    get rotation(): number {
+        return this._rotation;
+    }
+
+    get cos(): number {
+        return this._cos !== null ? this._cos : (this._cos = cos(this._rotation));
+    }
+
+    get sin(): number {
+        return this._sin !== null ? this._sin : (this._sin = sin(this._rotation));
+    }
+
+    get cos90(): number {
+        return this._cos90 !== null ? this._cos90 : (this._cos90 = cos(this._rotation + Math.PI / 2));
+    }
+
+    get sin90(): number {
+        return this._sin90 !== null ? this._sin90 : (this._sin90 = sin(this._rotation + Math.PI / 2));
+    }
+}
+
+export class IntContext {
+    private context: CanvasRenderingContext2D;
+
+    private states = [...new Array(10)].map(() => new IntContextState());
+    private currentStateIndex = 0;
+
+    constructor(context: CanvasRenderingContext2D) {
+        this.context = context;
+    }
+
+    beginPath(): void {
+        this.context.beginPath();
+    }
+
+    closePath(): void {
+        this.context.closePath();
+    }
+
+    moveTo(x: number, y: number): void {
+        this.context.moveTo(this.xCoordinate(x, y), this.yCoordinate(x, y));
+    }
+
+    lineTo(x: number, y: number): void {
+        this.context.lineTo(this.xCoordinate(x, y), this.yCoordinate(x, y));
+    }
+
+    bezierCurveTo(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number): void {
+        this.context.bezierCurveTo(
+            this.xCoordinate(x1, y1),
+            this.yCoordinate(x1, y1),
+            this.xCoordinate(x2, y2),
+            this.yCoordinate(x2, y2),
+            this.xCoordinate(x3, y3),
+            this.yCoordinate(x3, y3),
+        );
+    }
+
+    drawImage(image: CanvasImageSource, x1: number, y1: number, dw1: number, dh1: number, x2: number = undefined, y2: number = undefined, dw2: number = undefined, dh2: number = undefined) {
+        if (x2 === undefined) {
+            this.context.drawImage(
+                image,
+                this.xCoordinate(x1, y1),
+                this.yCoordinate(x1, y1),
+                round(dw1 * this.state.scale),
+                round(dh1 * this.state.scale)
+            );
+            return;
+        }
+        this.context.drawImage(
+            image,
+            x1, y1,
+            dw1,
+            dh1,
+            x2 && this.xCoordinate(x2, y2),
+            y2 && this.yCoordinate(x2, y2),
+            dw2 && round(dw2 * this.state.scale),
+            dh2 && round(dh2 * this.state.scale)
+        );
+    }
+
+    strokeText(text: string, x: number, y: number) {
+        this.context.strokeText(text, this.xCoordinate(x, y), this.yCoordinate(x, y));
+    }
+
+    fillText(text: string, x: number, y: number) {
+        this.context.fillText(text, this.xCoordinate(x, y), this.yCoordinate(x, y));
+    }
+
+    stroke(): void {
+        this.context.stroke();
+    }
+
+    fill(): void {
+        this.context.fill();
+    }
+
+    clip(): void {
+        this.context.clip();
+    }
+
+    fillRect(x: number, y: number, width: number, height: number): void {
+        this.context.fillRect(
+            this.xCoordinate(x, y),
+            this.yCoordinate(x, y),
+            round(width * this.state.scale),
+            round(height * this.state.scale)
+        );
+    }
+
+    rect(x: number, y: number, width: number, height: number): void {
+        this.context.rect(
+            this.xCoordinate(x, y),
+            this.yCoordinate(x, y),
+            round(width * this.state.scale),
+            round(height * this.state.scale)
+        );
+    }
+
+    arc(x: number, y: number, radius: number, start: number, end: number): void {
+        this.context.arc(
+            this.xCoordinate(x, y),
+            this.yCoordinate(x, y),
+            round(radius * this.state.scale),
+            start,
+            end
+        );
+    }
+
+    ellipse(x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, anticlockwise?: boolean): void {
+        this.context.ellipse(
+            this.xCoordinate(x, y),
+            this.yCoordinate(x, y),
+            round(radiusX * this.state.scale),
+            round(radiusY * this.state.scale),
+            rotation,
+            startAngle,
+            endAngle
+        );
+    }
+
+    xCoordinate(x: number, y: number): number {
+        return round(this.state.x + this.state.scale * (x * this.state.cos + y * this.state.sin));
+    }
+
+    yCoordinate(x: number, y: number): number {
+        return round(this.state.y + this.state.scale * (y * this.state.sin90 + x * this.state.cos90));
+    }
+
+    set strokeStyle(value: string) {
+        this.context.strokeStyle = value;
+    }
+
+    set fillStyle(value: string) {
+        this.context.fillStyle = value;
+    }
+
+    set lineCap(value: typeof context.lineCap) {
+        this.context.lineCap = value;
+    }
+
+    set textBaseline(value: typeof context.textBaseline) {
+        this.context.textBaseline = value;
+    }
+
+    set lineWidth(value: number) {
+        this.context.lineWidth = round(value * this.state.scale);
+    }
+
+    set globalAlpha(value: number) {
+        this.context.globalAlpha = value;
+    }
+
+    translate(x: number, y: number): void {
+        this.state.x = this.xCoordinate(x, y);
+        this.state.y = this.yCoordinate(x, y);
+    }
+
+    scale(scale: number): void {
+        this.state.scale *= scale;
+    }
+
+    rotate(angle: number): void {
+        this.state.rotation = this.state.rotation + angle;
+    }
+
+    save(): void {
+        this.context.save();
+        this.state.copyTo(this.states[++this.currentStateIndex]);
+    }
+
+    restore(): void {
+        this.context.restore();
+        this.currentStateIndex--;
+    }
+
+    get state() {
+        return this.states[this.currentStateIndex];
+    }
+
+    setFont(weight: number, size: number, family: string): void {
+        this.context.font = `${weight} ${round(size * this.state.scale)}px ${family}`;
+    }
+}
+
 interface Vector2D {
     x: number;
     y: number;
@@ -64,7 +298,7 @@ class RoundShape {
     }
 }
 
-const drawRoundShapeLight = (context: CanvasRenderingContext2D, roundShape: RoundShape) => {
+const drawRoundShapeLight = (context: IntContext, roundShape: RoundShape) => {
     context.save();
 
     context.strokeStyle = roundShape.light;
@@ -79,7 +313,7 @@ const drawRoundShapeLight = (context: CanvasRenderingContext2D, roundShape: Roun
     context.restore();
 };
 
-const drawRoundShape = (context: CanvasRenderingContext2D, roundShape: RoundShape) => {
+const drawRoundShape = (context: IntContext, roundShape: RoundShape) => {
     context.strokeStyle = roundShape.shadow;
     context.lineWidth = roundShape.width;
     context.beginPath();
@@ -88,7 +322,7 @@ const drawRoundShape = (context: CanvasRenderingContext2D, roundShape: RoundShap
     context.stroke();
 };
 
-const isFirefox = navigator.userAgent.search('Firefox') >= 0;
+// const isFirefox = navigator.userAgent.search('Firefox') >= 0;
 
 const rocketParticles = () => {
     const lifeTime = 20;
@@ -125,7 +359,7 @@ const rocketParticles = () => {
             }
         },
 
-        render: (context: CanvasRenderingContext2D) => {
+        render: (context: IntContext) => {
             for (let i = 0; i < aliveParticles; i++) {
                 const particle = particles[i];
                 const progress = particle.time / lifeTime;
@@ -143,12 +377,28 @@ const rocketParticles = () => {
                 context.fillStyle = colors[particle.time];
                 context.beginPath();
                 const radius = Math.round(25 * (1 - abs(0.3 - progress)));
+
+
+
+
+
+
+
+                context.arc(Math.round(particle.x), Math.round(particle.y), radius, 0, TAU);
+                /*
                 if (isFirefox) {
                     const length = radius * 2;
                     context.fillRect(Math.round(particle.x - radius), Math.round(particle.y) - radius, length, length);
                 } else {
                     context.arc(Math.round(particle.x), Math.round(particle.y), radius, 0, TAU);
                 }
+                */
+
+
+
+
+
+
                 context.closePath();
                 context.fill();
 
@@ -302,7 +552,7 @@ export class Player extends GameObject {
         }
     }
 
-    render(context: CanvasRenderingContext2D) {
+    render(context: IntContext) {
         context.save();
 
         if (this.rocket) {
@@ -327,7 +577,7 @@ export class Player extends GameObject {
         this.rightArm.end.y = this.rightArm.begin.y - 0.4 * sin(this.animationState[AnimationProperty.ArmsRotation]);
 
         context.translate(this.left + this.width / 2, this.top + this.height / 2);
-        context.scale(this.height / 2, this.height / 2);
+        context.scale(this.height / 2);
 
         context.lineCap = 'round';
 
@@ -371,7 +621,7 @@ export class Player extends GameObject {
         context.restore();
     }
 
-    drawGlass(context: CanvasRenderingContext2D) {
+    drawGlass(context: IntContext) {
         context.beginPath();
         const startX = 0.3 * this.direction;
         const startY = -0.9;
@@ -446,7 +696,7 @@ abstract class InteractiveObject extends GameObject {
     id: number;
     layer: number;
 
-    abstract render(context: CanvasRenderingContext2D): void;
+    abstract render(context: IntContext): void;
     tick(state: GameState) { }
     preTick(state: GameState) { }
 }
@@ -467,7 +717,7 @@ class Rocket extends InteractiveObject {
         this.leftTube.shadow = this.rightTube.shadow = '#999';
     }
 
-    bodyPath(context: CanvasRenderingContext2D) {
+    bodyPath(context: IntContext) {
         context.beginPath();
         context.moveTo(0, -1);
         context.bezierCurveTo(0.3, -0.8, 0.3, -0.4, 0.15, -0.1);
@@ -476,7 +726,7 @@ class Rocket extends InteractiveObject {
         context.closePath();
     }
 
-    wingsPath(context: CanvasRenderingContext2D) {
+    wingsPath(context: IntContext) {
         context.beginPath();
         context.moveTo(0.25, -0.5);
         context.bezierCurveTo(0.45, -0.35, 0.4, 0, 0.4, 0);
@@ -487,10 +737,10 @@ class Rocket extends InteractiveObject {
         context.closePath();
     }
 
-    render(context: CanvasRenderingContext2D) {
+    render(context: IntContext) {
         context.save();
         context.translate(this.position.x + this.width / 2, this.position.y + this.width / 2);
-        context.scale(60, 60);
+        context.scale(60);
         context.rotate(cos(this.rotation * 0.1) * 0.1);
         this.rotation++;
 
@@ -540,7 +790,7 @@ abstract class Platform extends InteractiveObject {
         return Platform.height;
     }
 
-    abstract render(context: CanvasRenderingContext2D): void;
+    abstract render(context: IntContext): void;
     tick(state: GameState) {
         if (this.position.y > state.screenArea.bottom + WORLD_SIZE) {
             state.removeObject(this);
@@ -548,14 +798,20 @@ abstract class Platform extends InteractiveObject {
     }
 
     preTick(state: GameState) {
-        if (this !== state.ignorePlatform && state.player.high <= this.top && state.player.speed.y >= 0 && this.isPlayerOn(state.player)) {
+        if (this !== state.ignorePlatform && this.isPlayerOn(state.player)) {
             state.onPlatform = this;
             state.player.position.y = this.top - state.player.height;
         }
     }
 
     isPlayerOn(player: Player): boolean {
-        return abs(player.bottom - this.top) < 10 && player.right > this.left && player.left < this.right;
+        return (
+            player.speed.y >= 0
+            && player.right > this.left
+            && player.left < this.right
+            && player.high < this.top + 1
+            && abs(player.bottom - this.top) < 10
+        );
     }
 }
 
@@ -624,7 +880,7 @@ class StaticPlatform extends Platform {
         return canvas;
     })();
 
-    render(context: CanvasRenderingContext2D) {
+    render(context: IntContext) {
         context.drawImage(StaticPlatform.sprite, this.position.x, this.position.y - 10, Platform.width, Platform.height + 20);
     }
 }
@@ -708,7 +964,7 @@ class IcePlatform extends Platform {
         return canvas;
     })();
 
-    render(context: CanvasRenderingContext2D) {
+    render(context: IntContext) {
         context.globalAlpha = this.time / IcePlatform.maxTime;
         context.drawImage(IcePlatform.sprite, this.position.x, this.position.y - 10, Platform.width, Platform.height + 40);
         context.globalAlpha = 1;
@@ -781,7 +1037,7 @@ class MovingPlatform extends Platform {
     render = (() => {
         let lightRotation: number = 0;
 
-        const renderLight = (sprite: typeof MovingPlatform.lightSprites[0], lightDirection: number) => {
+        const renderLight = (context: IntContext, sprite: typeof MovingPlatform.lightSprites[0], lightDirection: number) => {
             const direction = lightDirection + lightRotation;
             context.save();
             context.translate(
@@ -792,14 +1048,14 @@ class MovingPlatform extends Platform {
             context.restore();
         };
 
-        return (context: CanvasRenderingContext2D) => {
+        return (context: IntContext) => {
             context.save();
             context.translate(this.position.x, this.position.y);
 
             for (let i = MovingPlatform.lightSprites.length; i--; ) {
                 const lightDirection = MovingPlatform.lightsAngle * i;
                 if ((lightDirection + lightRotation) % TAU >= PI) {
-                    renderLight(MovingPlatform.lightSprites[i], lightDirection);
+                    renderLight(context, MovingPlatform.lightSprites[i], lightDirection);
                 }
             }
 
@@ -821,7 +1077,7 @@ class MovingPlatform extends Platform {
             for (let i = MovingPlatform.lightSprites.length; i--; ) {
                 const lightDirection = MovingPlatform.lightsAngle * i;
                 if ((lightDirection + lightRotation) % TAU < PI) {
-                    renderLight(MovingPlatform.lightSprites[i], lightDirection);
+                    renderLight(context, MovingPlatform.lightSprites[i], lightDirection);
                 }
             }
 
@@ -964,19 +1220,18 @@ let spsCounter: number = 0;
 let fpsCounter: number = 0;
 */
 
-const render = (state: GameState) => {
+const render = (state: GameState, context: IntContext) => {
     context.save();
     context.translate(0, window.innerHeight / 2);
-    context.scale(1, scene.scale);
-    context.translate(0, -WORLD_SIZE / 2);
+    context.translate(0, -WORLD_SIZE * scene.scale / 2);
 
     context.beginPath();
-    context.rect(0, 0, window.innerWidth, WORLD_SIZE);
+    context.rect(0, 0, window.innerWidth, WORLD_SIZE * scene.scale);
     context.closePath();
     context.clip();
 
     context.translate(window.innerWidth / 2, 0);
-    context.scale(scene.scale, 1);
+    context.scale(scene.scale);
     context.translate(-WORLD_SIZE / 2, 0);
 
     context.translate(-state.screenArea.left, -state.screenArea.top);
@@ -992,11 +1247,11 @@ const render = (state: GameState) => {
     context.restore();
 
     context.save();
-    context.scale(scene.scale, scene.scale);
+    context.scale(scene.scale);
     const highScore = `HI-SCORE ${state.highScore.toString().padStart(6, '0')}`;
     const score = `SCORE    ${state.score.toString().padStart(6, '0')}`;
     context.textBaseline = 'top';
-    context.font = '1000 40px monospace'
+    context.setFont(1000, 40, 'monospace');
     context.lineWidth = 5;
     context.strokeStyle = '#333';
     context.strokeText(highScore, 20, 20);
@@ -1020,6 +1275,7 @@ export const createGame = ({rockets = false}) => {
     let currentStep: number = 0;
 
     const state = new GameState();
+    const intContext = new IntContext(context);
 
     state.backgroundY = background.getHeight() * random();
     state.player.position.x = (WORLD_SIZE - state.player.width) / 2;
@@ -1038,7 +1294,7 @@ export const createGame = ({rockets = false}) => {
         state.updateScore();
 
         background.draw(context, state.backgroundY, canvas.width, canvas.height);
-        render(state);
+        render(state, intContext);
 
         const timeGap = min(500, currentTime - state.previousTime + gameTimeGap);
         const stepsTorun = (timeGap * STEPS_PER_MILISECOND) | 0;
