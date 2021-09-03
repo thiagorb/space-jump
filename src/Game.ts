@@ -11,8 +11,6 @@ class IntContextState {
     private _rotation: number = 0;
     public cos: number = 1;
     public sin: number = 0;
-    public cos90: number = 0;
-    public sin90: number = 1;
 
     copyTo(other: IntContextState) {
         other.x = this.x;
@@ -21,16 +19,12 @@ class IntContextState {
         other._rotation = this._rotation;
         other.cos = this.cos;
         other.sin = this.sin;
-        other.cos90 = this.cos90;
-        other.sin90 = this.sin90;
     }
 
     set rotation(value: number) {
         this._rotation = value;
         this.cos = cos(this._rotation);
         this.sin = sin(this._rotation);
-        this.cos90 = cos(this._rotation + Math.PI / 2);
-        this.sin90 = sin(this._rotation + Math.PI / 2);
     }
 
     get rotation(): number {
@@ -163,7 +157,7 @@ export class IntContext {
     }
 
     yCoordinate(x: number, y: number): number {
-        return this.state.y + this.state.scale * (y * this.state.sin90 + x * this.state.cos90) | 0;
+        return this.state.y + this.state.scale * (y * this.state.cos - x * this.state.sin) | 0;
     }
 
     set strokeStyle(value: string) {
