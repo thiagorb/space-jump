@@ -311,6 +311,7 @@ const drawRoundShape = (context: IntContext, roundShape: RoundShape) => {
     }
 };
 
+const isFirefox = navigator.userAgent.search('Firefox') >= 0;
 const rocketParticles = () => {
     const lifeTime = 20;
     const maxParticles: number = 250;
@@ -362,12 +363,14 @@ const rocketParticles = () => {
                 }
 
                 context.fillStyle = colors[particle.time];
-                context.beginPath();
                 const radius = 25 * (1 - abs(0.3 - progress));
-                context.arc(particle.x, particle.y, radius, 0, TAU);
-
-                context.closePath();
-                context.fill();
+                if (isFirefox) {
+                    context.fillRect(particle.x - radius, particle.y - radius, radius * 2, radius * 2);
+                } else {
+                    context.beginPath();
+                    context.arc(particle.x, particle.y, radius, 0, TAU);
+                    context.fill();
+                }
 
                 particle.time++;
                 particle.x += particle.speed.x;

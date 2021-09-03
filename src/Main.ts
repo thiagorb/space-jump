@@ -1,7 +1,7 @@
 import { soundPlayer } from "./Audio";
 import { getBackground } from "./Background";
 import { createGame, IntContext, Player } from "./Game";
-import { canvas, context, keyboard, keyboardMap, random, scene, screenHeight, screenWidth, TAU, WORLD_SIZE } from "./Globals";
+import { canvas, context, keyboard, keyboardMap, scene, TAU, WORLD_SIZE } from "./Globals";
 import { LocalStorage } from "./LocalStorage";
 
 const resize = () => {
@@ -259,7 +259,7 @@ let logo: HTMLCanvasElement;
 const drawLogo = () => {
     logo = document.querySelector<HTMLCanvasElement>('#logo');
     const ratio = 0.4;
-    logo.width = Math.min(screenWidth, screenHeight) * 0.8;
+    logo.width = Math.min(screen.width * window.devicePixelRatio, screen.height * window.devicePixelRatio) * 0.8;
     logo.height = logo.width * ratio;
     const context = logo.getContext('2d');
     const scale = logo.width;
