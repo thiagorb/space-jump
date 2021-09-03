@@ -277,27 +277,38 @@ class RoundShape {
 }
 
 const drawRoundShapeLight = (context: IntContext, roundShape: RoundShape) => {
-    context.save();
-
-    context.strokeStyle = roundShape.light;
     const log = Math.log(roundShape.width * 4.4) / 1.8;
-    context.translate(-0.07 * log, -0.07 * log);
-    context.lineWidth = log;
-    context.beginPath();
-    context.moveTo(roundShape.begin.x, roundShape.begin.y);
-    context.lineTo(roundShape.end.x, roundShape.end.y);
-    context.stroke();
+    const shift = -0.07 * log;
 
-    context.restore();
+    if (roundShape.begin.x === roundShape.end.x && roundShape.begin.y === roundShape.end.y) {
+        context.fillStyle = roundShape.light;
+        context.beginPath();
+        context.arc(roundShape.begin.x + shift, roundShape.begin.y + shift, log / 2, 0, TAU);
+        context.fill();
+    } else {
+        context.strokeStyle = roundShape.light;
+        context.lineWidth = log;
+        context.beginPath();
+        context.moveTo(roundShape.begin.x + shift, roundShape.begin.y + shift);
+        context.lineTo(roundShape.end.x + shift, roundShape.end.y + shift);
+        context.stroke();
+    }
 };
 
 const drawRoundShape = (context: IntContext, roundShape: RoundShape) => {
-    context.strokeStyle = roundShape.shadow;
-    context.lineWidth = roundShape.width;
-    context.beginPath();
-    context.moveTo(roundShape.begin.x, roundShape.begin.y);
-    context.lineTo(roundShape.end.x, roundShape.end.y);
-    context.stroke();
+    if (roundShape.begin.x === roundShape.end.x && roundShape.begin.y === roundShape.end.y) {
+        context.fillStyle = roundShape.shadow;
+        context.beginPath();
+        context.arc(roundShape.begin.x, roundShape.begin.y, roundShape.width / 2, 0, TAU);
+        context.fill();
+    } else {
+        context.strokeStyle = roundShape.shadow;
+        context.lineWidth = roundShape.width;
+        context.beginPath();
+        context.moveTo(roundShape.begin.x, roundShape.begin.y);
+        context.lineTo(roundShape.end.x, roundShape.end.y);
+        context.stroke();
+    }
 };
 
 const rocketParticles = () => {
@@ -459,10 +470,10 @@ export class Player extends GameObject {
     legGap = 0.25;
     armGap = 0.5;
 
-    body = new RoundShape(0, 0.1, 0, 0.101, 1.0);
+    body = new RoundShape(0, 0.1, 0, 0.1, 1.0);
     leftLeg = new RoundShape(-this.legGap * 0.9, 0.3, -this.legGap, 0.8, 0.4);
     rightLeg = new RoundShape(this.legGap * 0.9, 0.3, this.legGap, 0.8, 0.4);
-    head = new RoundShape(0, -0.5, 0, -0.501, 1.0);
+    head = new RoundShape(0, -0.5, 0, -0.5, 1.0);
     leftArm = new RoundShape(-this.armGap * 0.8, -0.1, -this.armGap, 0.3, 0.4);
     rightArm = new RoundShape(this.armGap * 0.8, -0.1, this.armGap, 0.3, 0.4);
 
@@ -566,13 +577,15 @@ export class Player extends GameObject {
         context.fillStyle = '#000';
         context.fill();
 
-        context.strokeStyle = '#fff';
+        context.fillStyle = context.strokeStyle = '#fff';
         context.lineWidth = 0.05;
         context.beginPath();
         context.bezierCurveTo(0.35 * this.direction, -0.7, 0.34 * this.direction, -0.75, 0.26 * this.direction, -0.82);
-        context.moveTo(0.4 * this.direction, -0.6);
-        context.lineTo(0.4 * this.direction, -0.61);
         context.stroke();
+
+        context.beginPath();
+        context.arc(0.4 * this.direction, -0.6, 0.025, 0, TAU);
+        context.fill();
 
         context.restore();
     }
@@ -679,7 +692,6 @@ class Rocket extends InteractiveObject {
         context.bezierCurveTo(0.3, -0.8, 0.3, -0.4, 0.15, -0.1);
         context.lineTo(-0.15, -0.1)
         context.bezierCurveTo(-0.3, -0.4, -0.3, -0.8, 0, -1);
-        context.closePath();
     }
 
     wingsPath(context: IntContext) {
@@ -690,7 +702,6 @@ class Rocket extends InteractiveObject {
         context.moveTo(-0.25, -0.5);
         context.bezierCurveTo(-0.45, -0.35, -0.4, 0, -0.4, 0);
         context.bezierCurveTo(-0.3, -0.2, -0.20, -0.2, -0.20, -0.2);
-        context.closePath();
     }
 
     render(context: IntContext) {
@@ -845,7 +856,6 @@ class StaticPlatform extends Platform {
 class IcePlatform extends Platform {
     time: number = IcePlatform.maxTime;
     disappearing: boolean = false;
-
 
     private static sprite = (() => {
         const canvas = document.createElement('canvas');
@@ -1179,15 +1189,15 @@ let fpsCounter: number = 0;
 
 const render = (state: GameState, context: IntContext) => {
     context.save();
-    context.translate(0, window.innerHeight / 2);
+    context.translate(0, canvas.height / 2);
     context.translate(0, -WORLD_SIZE * scene.scale / 2);
 
     context.beginPath();
-    context.rect(0, 0, window.innerWidth, WORLD_SIZE * scene.scale);
+    context.rect(0, 0, canvas.width, WORLD_SIZE * scene.scale);
     context.closePath();
     context.clip();
 
-    context.translate(window.innerWidth / 2, 0);
+    context.translate(canvas.width / 2, 0);
     context.scale(scene.scale);
     context.translate(-WORLD_SIZE / 2, 0);
 

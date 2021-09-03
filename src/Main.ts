@@ -1,17 +1,17 @@
 import { soundPlayer } from "./Audio";
 import { getBackground } from "./Background";
 import { createGame, IntContext, Player } from "./Game";
-import { canvas, context, keyboard, keyboardMap, random, scene, TAU, WORLD_SIZE } from "./Globals";
+import { canvas, context, keyboard, keyboardMap, random, scene, screenHeight, screenWidth, TAU, WORLD_SIZE } from "./Globals";
 import { LocalStorage } from "./LocalStorage";
 
 const resize = () => {
     const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')
-    canvas.width = document.body.clientWidth;
-    canvas.height = document.body.clientHeight;
+    canvas.width = document.body.clientWidth * window.devicePixelRatio;
+    canvas.height = document.body.clientHeight * window.devicePixelRatio;
     const vMin = Math.min(document.body.clientWidth, document.body.clientHeight) / 100;
     document.documentElement.style.fontSize = `${vMin}px`;
 
-    scene.scale = Math.min(window.innerWidth / WORLD_SIZE, window.innerHeight / WORLD_SIZE);
+    scene.scale = Math.min(canvas.width / WORLD_SIZE, canvas.height / WORLD_SIZE);
 };
 window.addEventListener('resize', resize);
 
@@ -129,7 +129,7 @@ export const activateMenu = () => {
         background.draw(context, backgroundY, canvas.width, canvas.height);
 
         intContext.save();
-        intContext.translate(window.innerWidth / 2, window.innerHeight / 2);
+        intContext.translate(canvas.width / 2, canvas.height / 2);
         intContext.scale(scene.scale);
         intContext.translate(-WORLD_SIZE / 2, -WORLD_SIZE / 2);
 
@@ -259,7 +259,7 @@ let logo: HTMLCanvasElement;
 const drawLogo = () => {
     logo = document.querySelector<HTMLCanvasElement>('#logo');
     const ratio = 0.4;
-    logo.width = Math.min(screen.height * window.devicePixelRatio, screen.width * window.devicePixelRatio) * 0.8;
+    logo.width = Math.min(screenWidth, screenHeight) * 0.8;
     logo.height = logo.width * ratio;
     const context = logo.getContext('2d');
     const scale = logo.width;
