@@ -9,48 +9,32 @@ class IntContextState {
     public y: number = 0;
     public scale: number = 1;
     private _rotation: number = 0;
-    private _cos: number = 1;
-    private _sin: number = 0;
-    private _cos90: number = 0;
-    private _sin90: number = 1;
+    public cos: number = 1;
+    public sin: number = 0;
+    public cos90: number = 0;
+    public sin90: number = 1;
 
     copyTo(other: IntContextState) {
         other.x = this.x;
         other.y = this.y;
         other.scale = this.scale;
         other._rotation = this._rotation;
-        other._cos = this._cos;
-        other._sin = this._sin;
-        other._cos90 = this._cos90;
-        other._sin90 = this._sin90;
+        other.cos = this.cos;
+        other.sin = this.sin;
+        other.cos90 = this.cos90;
+        other.sin90 = this.sin90;
     }
 
     set rotation(value: number) {
         this._rotation = value;
-        this._cos = null;
-        this._sin = null;
-        this._cos90 = null;
-        this._sin90 = null;
+        this.cos = cos(this._rotation);
+        this.sin = sin(this._rotation);
+        this.cos90 = cos(this._rotation + Math.PI / 2);
+        this.sin90 = sin(this._rotation + Math.PI / 2);
     }
 
     get rotation(): number {
         return this._rotation;
-    }
-
-    get cos(): number {
-        return this._cos !== null ? this._cos : (this._cos = cos(this._rotation));
-    }
-
-    get sin(): number {
-        return this._sin !== null ? this._sin : (this._sin = sin(this._rotation));
-    }
-
-    get cos90(): number {
-        return this._cos90 !== null ? this._cos90 : (this._cos90 = cos(this._rotation + Math.PI / 2));
-    }
-
-    get sin90(): number {
-        return this._sin90 !== null ? this._sin90 : (this._sin90 = sin(this._rotation + Math.PI / 2));
     }
 }
 
