@@ -1,42 +1,44 @@
 import { soundPlayer } from "./Audio";
 import { getBackground as getBackground } from "./Background";
-import { WORLD_SIZE, GRAVITY, TERMINAL_VELOCITY, STEPS_PER_MILISECOND, SPEED_UNIT, scene as scene, context, keyboard, JUMP_SPEED, ACCELERATION_UNIT, TAU, random, canvas } from "./Globals";
+import { WORLD_SIZE, scene as scene, keyboard, TAU, random, canvas } from "./Globals";
 import { LocalStorage } from "./LocalStorage";
 import { activateMenu, fadeInTransition, fadeOutTransition, waitNextFrame } from "./Main";
 
-class IntContextState {
+const STEPS_PER_SECOND = 60;
+const STEPS_PER_MILISECOND = STEPS_PER_SECOND / 1000;
+const SPEED_UNIT = 1 / STEPS_PER_SECOND;
+const ACCELERATION_UNIT = SPEED_UNIT / STEPS_PER_SECOND;
+const GRAVITY = 2000 * ACCELERATION_UNIT;
+const JUMP_SPEED = 1200 * SPEED_UNIT;
+const TERMINAL_VELOCITY = 1000 * SPEED_UNIT;
+const SPRITES_SCALE = 2;
+const { cos, sin, max, min, abs, PI } = Math;
+const sign = (value: number): (-1 | 0 | 1) => value > 0 ? 1: (value < 0 ? -1 : 0);
+const between = (lower: number, upper: number, value: number) => max(lower, min(upper, value));
+
+/*
+class WrappedContextState {
     public x: number = 0;
     public y: number = 0;
-    public scale: number = 1;
-    private _rotation: number = 0;
-    public cos: number = 1;
-    public sin: number = 0;
+    public scaleX: number = 1;
+    public scaleY: number = 1;
+    public rotation: boolean = false;
 
-    copyTo(other: IntContextState) {
+    copyTo(other: WrappedContextState) {
         other.x = this.x;
         other.y = this.y;
-        other.scale = this.scale;
-        other._rotation = this._rotation;
-        other.cos = this.cos;
-        other.sin = this.sin;
-    }
-
-    set rotation(value: number) {
-        this._rotation = value;
-        this.cos = cos(this._rotation);
-        this.sin = sin(this._rotation);
-    }
-
-    get rotation(): number {
-        return this._rotation;
+        other.scaleX = this.scaleX;
+        other.scaleY = this.scaleY;
+        other.rotation = false;
     }
 }
 
-export class IntContext {
+export class WrappedContext {
     private context: CanvasRenderingContext2D;
 
-    private states = [...new Array(10)].map(() => new IntContextState());
-    private currentStateIndex = 0;
+    private states = [...new Array(10)].map(() => new WrappedContextState());
+    private state: WrappedContextState = this.states[0];
+    private currentStateIndex = 1;
 
     constructor(context: CanvasRenderingContext2D) {
         this.context = context;
@@ -51,21 +53,21 @@ export class IntContext {
     }
 
     moveTo(x: number, y: number): void {
-        this.context.moveTo(this.xCoordinate(x, y), this.yCoordinate(x, y));
+        this.context.moveTo(this.xCoordinate(x), this.yCoordinate(y));
     }
 
     lineTo(x: number, y: number): void {
-        this.context.lineTo(this.xCoordinate(x, y), this.yCoordinate(x, y));
+        this.context.lineTo(this.xCoordinate(x), this.yCoordinate(y));
     }
 
     bezierCurveTo(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number): void {
         this.context.bezierCurveTo(
-            this.xCoordinate(x1, y1),
-            this.yCoordinate(x1, y1),
-            this.xCoordinate(x2, y2),
-            this.yCoordinate(x2, y2),
-            this.xCoordinate(x3, y3),
-            this.yCoordinate(x3, y3),
+            this.xCoordinate(x1),
+            this.yCoordinate(y1),
+            this.xCoordinate(x2),
+            this.yCoordinate(y2),
+            this.xCoordinate(x3),
+            this.yCoordinate(y3),
         );
     }
 
@@ -73,10 +75,10 @@ export class IntContext {
         if (x2 === undefined) {
             this.context.drawImage(
                 image,
-                this.xCoordinate(x1, y1),
-                this.yCoordinate(x1, y1),
-                dw1 * this.state.scale | 0,
-                dh1 * this.state.scale | 0
+                this.xCoordinate(x1),
+                this.yCoordinate(y1),
+                dw1 * this.state.scaleX | 0,
+                dh1 * this.state.scaleY | 0
             );
             return;
         }
@@ -85,19 +87,19 @@ export class IntContext {
             x1, y1,
             dw1,
             dh1,
-            this.xCoordinate(x2, y2),
-            this.yCoordinate(x2, y2),
-            dw2 * this.state.scale | 0,
-            dh2 * this.state.scale | 0
+            this.xCoordinate(x2),
+            this.yCoordinate(y2),
+            dw2 * this.state.scaleX | 0,
+            dh2 * this.state.scaleY | 0
         );
     }
 
     strokeText(text: string, x: number, y: number) {
-        this.context.strokeText(text, this.xCoordinate(x, y), this.yCoordinate(x, y));
+        this.context.strokeText(text, this.xCoordinate(x), this.yCoordinate(y));
     }
 
     fillText(text: string, x: number, y: number) {
-        this.context.fillText(text, this.xCoordinate(x, y), this.yCoordinate(x, y));
+        this.context.fillText(text, this.xCoordinate(x), this.yCoordinate(y));
     }
 
     stroke(): void {
@@ -114,50 +116,49 @@ export class IntContext {
 
     fillRect(x: number, y: number, width: number, height: number): void {
         this.context.fillRect(
-            this.xCoordinate(x, y),
-            this.yCoordinate(x, y),
-            width * this.state.scale | 0,
-            height * this.state.scale | 0
+            this.xCoordinate(x),
+            this.yCoordinate(y),
+            width * this.state.scaleX | 0,
+            height * this.state.scaleY | 0
+        );
+    }
+
+    clearRect(x: number, y: number, width: number, height: number): void {
+        this.context.clearRect(
+            this.xCoordinate(x),
+            this.yCoordinate(y),
+            width * this.state.scaleX | 0,
+            height * this.state.scaleY | 0
         );
     }
 
     rect(x: number, y: number, width: number, height: number): void {
         this.context.rect(
-            this.xCoordinate(x, y),
-            this.yCoordinate(x, y),
-            width * this.state.scale | 0,
-            height * this.state.scale | 0
+            this.xCoordinate(x),
+            this.yCoordinate(y),
+            width * this.state.scaleX | 0,
+            height * this.state.scaleY | 0
         );
     }
 
     arc(x: number, y: number, radius: number, start: number, end: number): void {
-        this.context.arc(
-            this.xCoordinate(x, y),
-            this.yCoordinate(x, y),
-            radius * this.state.scale | 0,
+        this.context.ellipse(
+            this.xCoordinate(x),
+            this.yCoordinate(y),
+            radius * this.state.scaleX | 0,
+            radius * this.state.scaleY | 0,
+            0,
             start,
             end
         );
     }
 
-    ellipse(x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, anticlockwise?: boolean): void {
-        this.context.ellipse(
-            this.xCoordinate(x, y),
-            this.yCoordinate(x, y),
-            radiusX * this.state.scale | 0,
-            radiusY * this.state.scale | 0,
-            rotation,
-            startAngle,
-            endAngle
-        );
+    xCoordinate(x: number): number {
+        return this.state.x + this.state.scaleX * x | 0;
     }
 
-    xCoordinate(x: number, y: number): number {
-        return this.state.x + this.state.scale * (x * this.state.cos + y * this.state.sin) | 0;
-    }
-
-    yCoordinate(x: number, y: number): number {
-        return this.state.y + this.state.scale * (y * this.state.cos - x * this.state.sin) | 0;
+    yCoordinate(y: number): number {
+        return this.state.y + this.state.scaleY * y | 0;
     }
 
     set strokeStyle(value: string) {
@@ -168,16 +169,16 @@ export class IntContext {
         this.context.fillStyle = value;
     }
 
-    set lineCap(value: typeof context.lineCap) {
+    set lineCap(value: CanvasLineCap) {
         this.context.lineCap = value;
     }
 
-    set textBaseline(value: typeof context.textBaseline) {
+    set textBaseline(value: CanvasTextBaseline) {
         this.context.textBaseline = value;
     }
 
     set lineWidth(value: number) {
-        this.context.lineWidth = value * this.state.scale | 0;
+        this.context.lineWidth = value * this.state.scaleX | 0;
     }
 
     set globalAlpha(value: number) {
@@ -185,45 +186,66 @@ export class IntContext {
     }
 
     translate(x: number, y: number): void {
-        this.state.x = this.xCoordinate(x, y);
-        this.state.y = this.yCoordinate(x, y);
+        this.state.x = this.xCoordinate(x);
+        this.state.y = this.yCoordinate(y);
     }
 
-    scale(scale: number): void {
-        this.state.scale *= scale;
+    scale(scaleX: number, scaleY: number): void {
+        this.state.scaleX *= scaleX;
+        this.state.scaleY *= scaleY;
     }
 
     rotate(angle: number): void {
-        this.state.rotation = this.state.rotation + angle;
+        this.context.save();
+        this.context.translate(this.xCoordinate(0), this.yCoordinate(0));
+        this.context.scale(this.state.scaleX, this.state.scaleY);
+        this.context.rotate(angle);
+        this.save();
+        this.state.x = 0;
+        this.state.y = 0;
+        this.state.scaleX = 1;
+        this.state.scaleY = 1;
+        this.state.rotation = true;
     }
 
     save(): void {
-        this.context.save();
-        this.state.copyTo(this.states[++this.currentStateIndex]);
+        this.states[this.currentStateIndex - 1].copyTo(this.states[this.currentStateIndex]);
+        this.currentStateIndex++;
+        this.state = this.states[this.currentStateIndex - 1];
     }
 
     restore(): void {
-        this.context.restore();
+        if (this.state.rotation) {
+            this.context.restore();
+            this.currentStateIndex--;
+        }
         this.currentStateIndex--;
-    }
-
-    get state() {
-        return this.states[this.currentStateIndex];
+        this.state = this.states[this.currentStateIndex - 1];
     }
 
     setFont(weight: number, size: number, family: string): void {
-        this.context.font = `${weight} ${size * this.state.scale | 0}px ${family}`;
+        this.context.font = `${weight} ${size * this.state.scaleX | 0}px ${family}`;
     }
 }
+
+const setFont = (context: WrappedContext, weight: number, size: number, family: string) => {
+    context.setFont(weight, size, family);
+};
+
+export const wrapContext = (context: CanvasRenderingContext2D) => new WrappedContext(context);
+
+/*/
+export type WrappedContext = CanvasRenderingContext2D;
+const setFont = (context: WrappedContext, weight: number, size: number, family: string) => {
+    context.font = `${weight} ${size}px ${family}`;
+};
+export const wrapContext = (context: CanvasRenderingContext2D) => context;
+//*/
 
 interface Vector2D {
     x: number;
     y: number;
 }
-
-const { cos, sin, max, min, abs, PI } = Math;
-const sign = (value: number): (-1 | 0 | 1) => value > 0 ? 1: (value < 0 ? -1 : 0);
-const between = (lower: number, upper: number, value: number) => max(lower, min(upper, value));
 
 abstract class GameObject {
     position: Vector2D = {x: 0, y: 0};
@@ -276,7 +298,7 @@ class RoundShape {
     }
 }
 
-const drawRoundShapeLight = (context: IntContext, roundShape: RoundShape) => {
+const drawRoundShapeLight = (context: WrappedContext, roundShape: RoundShape) => {
     const log = Math.log(roundShape.width * 4.4) / 1.8;
     const shift = -0.07 * log;
 
@@ -295,7 +317,7 @@ const drawRoundShapeLight = (context: IntContext, roundShape: RoundShape) => {
     }
 };
 
-const drawRoundShape = (context: IntContext, roundShape: RoundShape) => {
+const drawRoundShape = (context: WrappedContext, roundShape: RoundShape) => {
     if (roundShape.begin.x === roundShape.end.x && roundShape.begin.y === roundShape.end.y) {
         context.fillStyle = roundShape.shadow;
         context.beginPath();
@@ -311,7 +333,6 @@ const drawRoundShape = (context: IntContext, roundShape: RoundShape) => {
     }
 };
 
-const isFirefox = navigator.userAgent.search('Firefox') >= 0;
 const rocketParticles = () => {
     const lifeTime = 20;
     const maxParticles: number = 250;
@@ -325,12 +346,27 @@ const rocketParticles = () => {
         time: 0,
     }));
 
-    const colors = [...new Array(lifeTime)].map((_, i) => {
-        const progress = i / lifeTime;
-        const yellow = 255 * min(1, 1 - 2 * progress);
-        const decay = between(0, 1, 1 - progress);
-        return `rgba(${255 * decay}, ${yellow * decay}, 0, ${0.3 * decay})`;
-    });
+    const maxRadius = 50;
+    const spriteSize = 2 * maxRadius;
+    const spriteScaledSize = 0.5 * spriteSize;
+    const sprite = (() => {
+        const canvas = document.createElement('canvas');
+        canvas.width = spriteSize;
+        canvas.height = spriteSize * lifeTime;
+        const context = canvas.getContext('2d');
+        for (let i = lifeTime; i--; ) {
+            const progress = i / lifeTime;
+            const yellow = 255 * min(1, 1 - 2 * progress);
+            const decay = between(0, 1, 1 - progress);
+            const radius = maxRadius * (1 - abs(0.3 - progress));
+            context.fillStyle = `rgba(${255 * decay}, ${yellow * decay}, 0, ${0.3 * decay})`;
+            context.beginPath();
+            context.arc(maxRadius, maxRadius + spriteSize * i, radius, 0, TAU);
+            context.closePath();
+            context.fill();
+        }
+        return canvas;
+    })();
 
     let aliveParticles = 0;
 
@@ -347,35 +383,51 @@ const rocketParticles = () => {
             }
         },
 
-        render: (context: IntContext) => {
-            for (let i = 0; i < aliveParticles; i++) {
+        render: (context: WrappedContext) => {
+            if (aliveParticles === 0) {
+                return;
+            }
+
+            const transform = context.getTransform();
+            context.save();
+            context.resetTransform();
+            context.translate(transform.m41 | 0, transform.m42 | 0);
+            const scaleX = transform.m11;
+            const scaleY = transform.m22;
+
+            for (let i = aliveParticles; i--; ) {
                 const particle = particles[i];
-                const progress = particle.time / lifeTime;
-                if (progress >= 1) {
+                if (particle.time >= lifeTime) {
                     aliveParticles--;
                     if (i !== aliveParticles) {
-                        const tmp = particles[i];
-                        particles[i] = particles[aliveParticles];
-                        particles[aliveParticles] = tmp;
+                        particles[i].x = particles[aliveParticles].x;
+                        particles[i].y = particles[aliveParticles].y;
+                        particles[i].time = particles[aliveParticles].time;
+                        particles[i].speed.x = particles[aliveParticles].speed.x;
+                        particles[i].speed.y = particles[aliveParticles].speed.y;
                     }
 
                     continue;
                 }
 
-                context.fillStyle = colors[particle.time];
-                const radius = 25 * (1 - abs(0.3 - progress));
-                if (isFirefox) {
-                    context.fillRect(particle.x - radius, particle.y - radius, radius * 2, radius * 2);
-                } else {
-                    context.beginPath();
-                    context.arc(particle.x, particle.y, radius, 0, TAU);
-                    context.fill();
-                }
+                context.drawImage(
+                    sprite,
+                    0,
+                    particle.time * spriteSize,
+                    spriteSize,
+                    spriteSize,
+                    (particle.x - spriteScaledSize / 2) * scaleX | 0,
+                    (particle.y - spriteScaledSize / 2) * scaleY | 0,
+                    spriteScaledSize * scaleX | 0,
+                    spriteScaledSize * scaleY | 0
+                );
 
                 particle.time++;
                 particle.x += particle.speed.x;
                 particle.y += particle.speed.y;
             }
+
+            context.restore();
         }
     }
 };
@@ -522,7 +574,7 @@ export class Player extends GameObject {
         }
     }
 
-    render(context: IntContext) {
+    render(context: WrappedContext) {
         context.save();
 
         if (this.rocket) {
@@ -547,7 +599,7 @@ export class Player extends GameObject {
         this.rightArm.end.y = this.rightArm.begin.y - 0.4 * sin(this.animationState[AnimationProperty.ArmsRotation]);
 
         context.translate(this.left + this.width / 2, this.top + this.height / 2);
-        context.scale(this.height / 2);
+        context.scale(this.height / 2, this.height / 2);
 
         context.lineCap = 'round';
 
@@ -593,7 +645,7 @@ export class Player extends GameObject {
         context.restore();
     }
 
-    drawGlass(context: IntContext) {
+    drawGlass(context: WrappedContext) {
         context.beginPath();
         const startX = 0.3 * this.direction;
         const startY = -0.9;
@@ -668,7 +720,7 @@ abstract class InteractiveObject extends GameObject {
     id: number;
     layer: number;
 
-    abstract render(context: IntContext): void;
+    abstract render(context: WrappedContext): void;
     tick(state: GameState) { }
     preTick(state: GameState) { }
 }
@@ -689,49 +741,68 @@ class Rocket extends InteractiveObject {
         this.leftTube.shadow = this.rightTube.shadow = '#999';
     }
 
-    bodyPath(context: IntContext) {
-        context.beginPath();
-        context.moveTo(0, -1);
-        context.bezierCurveTo(0.3, -0.8, 0.3, -0.4, 0.15, -0.1);
-        context.lineTo(-0.15, -0.1)
-        context.bezierCurveTo(-0.3, -0.4, -0.3, -0.8, 0, -1);
-    }
-
-    wingsPath(context: IntContext) {
-        context.beginPath();
-        context.moveTo(0.25, -0.5);
-        context.bezierCurveTo(0.45, -0.35, 0.4, 0, 0.4, 0);
-        context.bezierCurveTo(0.3, -0.2, 0.20, -0.2, 0.20, -0.2);
-        context.moveTo(-0.25, -0.5);
-        context.bezierCurveTo(-0.45, -0.35, -0.4, 0, -0.4, 0);
-        context.bezierCurveTo(-0.3, -0.2, -0.20, -0.2, -0.20, -0.2);
-    }
-
-    render(context: IntContext) {
+    render(context: WrappedContext) {
         context.save();
         context.translate(this.position.x + this.width / 2, this.position.y + this.width / 2);
-        context.scale(60);
-        context.rotate(cos(this.rotation * 0.1) * 0.1);
         this.rotation++;
+        context.scale(1 / SPRITES_SCALE, 1 / SPRITES_SCALE);
+        context.translate(this.width / 2, this.height / 2);
+        context.rotate(cos(this.rotation * 0.1) * 0.1);
+        context.translate(-Rocket.sprite.width / 2, -Rocket.sprite.height * 4 / 5);
+        context.drawImage(Rocket.sprite, 0, 0, Rocket.sprite.width, Rocket.sprite.height);
+
+        context.restore();
+    }
+
+    private static sprite = (() => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 54 * SPRITES_SCALE;
+        canvas.height = 70 * SPRITES_SCALE;
+        const context = canvas.getContext('2d');
+        context.save();
+        context.scale(SPRITES_SCALE, SPRITES_SCALE);
+        context.translate(27, 63);
+
+        const bodyPath = () => {
+            context.beginPath();
+            context.moveTo(0, -1);
+            context.bezierCurveTo(0.3, -0.8, 0.3, -0.4, 0.15, -0.1);
+            context.lineTo(-0.15, -0.1)
+            context.bezierCurveTo(-0.3, -0.4, -0.3, -0.8, 0, -1);
+        };
+
+        const wingsPath = () => {
+            context.beginPath();
+            context.moveTo(0.25, -0.5);
+            context.bezierCurveTo(0.45, -0.35, 0.4, 0, 0.4, 0);
+            context.bezierCurveTo(0.3, -0.2, 0.20, -0.2, 0.20, -0.2);
+            context.moveTo(-0.25, -0.5);
+            context.bezierCurveTo(-0.45, -0.35, -0.4, 0, -0.4, 0);
+            context.bezierCurveTo(-0.3, -0.2, -0.20, -0.2, -0.20, -0.2);
+        };
+
+        context.scale(60, 60);
 
         context.lineWidth = 0.07;
         context.lineCap = 'round';
         context.strokeStyle = '#fff';
-        this.bodyPath(context);
+        bodyPath();
         context.stroke();
-        this.wingsPath(context);
+        wingsPath();
         context.stroke();
 
         context.fillStyle = '#bbb';
-        this.bodyPath(context);
+        bodyPath();
         context.fill();
 
         context.fillStyle = '#69f';
-        this.wingsPath(context);
+        wingsPath();
         context.fill();
 
         context.restore();
-    }
+
+        return canvas;
+    })();
 
     tick(state: GameState) {
         if (this.position.y > state.screenArea.bottom + WORLD_SIZE) {
@@ -761,7 +832,7 @@ abstract class Platform extends InteractiveObject {
         return Platform.height;
     }
 
-    abstract render(context: IntContext): void;
+    abstract render(context: WrappedContext): void;
     tick(state: GameState) {
         if (this.position.y > state.screenArea.bottom + WORLD_SIZE) {
             state.removeObject(this);
@@ -789,9 +860,8 @@ abstract class Platform extends InteractiveObject {
 class StaticPlatform extends Platform {
     private static sprite = (() => {
         const canvas = document.createElement('canvas');
-        const scale = 4;
-        canvas.width = Platform.width * scale;
-        canvas.height = (Platform.height + 20) * scale;
+        canvas.width = Platform.width * SPRITES_SCALE;
+        canvas.height = (Platform.height + 20) * SPRITES_SCALE;
         const context = canvas.getContext('2d');
 
         const linear = context.createLinearGradient(-1, 0, 1, 0);
@@ -813,7 +883,7 @@ class StaticPlatform extends Platform {
         radial2.addColorStop(1, `rgba(160, 160, 160, 1.0)`);
 
         context.save();
-        context.scale(scale, scale);
+        context.scale(SPRITES_SCALE, SPRITES_SCALE);
         context.translate(0, 10);
 
         // Start bottom and middle
@@ -851,7 +921,7 @@ class StaticPlatform extends Platform {
         return canvas;
     })();
 
-    render(context: IntContext) {
+    render(context: WrappedContext) {
         context.drawImage(StaticPlatform.sprite, this.position.x, this.position.y - 10, Platform.width, Platform.height + 20);
     }
 }
@@ -862,9 +932,8 @@ class IcePlatform extends Platform {
 
     private static sprite = (() => {
         const canvas = document.createElement('canvas');
-        const scale = 4;
-        canvas.width = Platform.width * scale;
-        canvas.height = (Platform.height + 40) * scale;
+        canvas.width = Platform.width * SPRITES_SCALE;
+        canvas.height = (Platform.height + 40) * SPRITES_SCALE;
         const context = canvas.getContext('2d');
 
         const radial = context.createRadialGradient(0, 0, 0, 0, 0, 1);
@@ -890,7 +959,7 @@ class IcePlatform extends Platform {
         radial2.addColorStop(1, `rgba(255, 255, 255, 0.7)`);
 
         context.save();
-        context.scale(scale, scale);
+        context.scale(SPRITES_SCALE, SPRITES_SCALE);
         context.translate(0, 10);
 
         // Start bottom and middle
@@ -934,7 +1003,7 @@ class IcePlatform extends Platform {
         return canvas;
     })();
 
-    render(context: IntContext) {
+    render(context: WrappedContext) {
         context.globalAlpha = this.time / IcePlatform.maxTime;
         context.drawImage(IcePlatform.sprite, this.position.x, this.position.y - 10, Platform.width, Platform.height + 40);
         context.globalAlpha = 1;
@@ -1001,24 +1070,51 @@ class MovingPlatform extends Platform {
     })();
     private static lightsAngle = Math.PI * 2 / MovingPlatform.lightSprites.length;
 
+    private static sprite = (() => {
+        const canvas = document.createElement('canvas');
+        canvas.width = Platform.width * SPRITES_SCALE;
+        canvas.height = (Platform.height + 20) * SPRITES_SCALE;
+        const context = canvas.getContext('2d');
+        context.save();
+        context.scale(SPRITES_SCALE, SPRITES_SCALE);
+
+        context.fillStyle = '#aaa';
+        context.beginPath();
+        context.ellipse(Platform.width / 2, Platform.height / 2 + 20, Platform.width / 2, Platform.height / 2, 0, 0, TAU);
+        context.fill();
+
+        context.fillStyle = 'black';
+        context.beginPath();
+        context.ellipse(Platform.width / 2, Platform.height / 2 + 10, Platform.width / 2, Platform.height / 2, 0, 0, TAU);
+        context.fill();
+
+        context.fillStyle = '#aaa';
+        context.beginPath();
+        context.ellipse(Platform.width / 2, Platform.height / 2, Platform.width / 2, Platform.height / 2, 0, 0, TAU);
+        context.fill();
+
+        context.restore();
+
+        return canvas;
+    })();
 
     direction: number = 1;
 
     render = (() => {
         let lightRotation: number = 0;
 
-        const renderLight = (context: IntContext, sprite: typeof MovingPlatform.lightSprites[0], lightDirection: number) => {
+        const renderLight = (context: WrappedContext, sprite: typeof MovingPlatform.lightSprites[0], lightDirection: number) => {
             const direction = lightDirection + lightRotation;
             context.save();
             context.translate(
                 this.width / 2 + (this.width * cos(direction)) / 2,
-                this.height / 2 - 5 + (this.height * sin(direction)) / 2,
+                this.height / 2 - 4 + (this.height * sin(direction)) / 2,
             );
             context.drawImage(sprite, 0, 0, sprite.width, sprite.height, -20, -20, 40, 40);
             context.restore();
         };
 
-        return (context: IntContext) => {
+        return (context: WrappedContext) => {
             context.save();
             context.translate(this.position.x, this.position.y);
 
@@ -1029,20 +1125,7 @@ class MovingPlatform extends Platform {
                 }
             }
 
-            context.fillStyle = '#aaa';
-            context.beginPath();
-            context.ellipse(this.width / 2, this.height / 2 + 10, this.width / 2, this.height / 2, 0, 0, TAU);
-            context.fill();
-
-            context.fillStyle = 'black';
-            context.beginPath();
-            context.ellipse(this.width / 2, this.height / 2, this.width / 2, this.height / 2, 0, 0, TAU);
-            context.fill();
-
-            context.fillStyle = '#aaa';
-            context.beginPath();
-            context.ellipse(this.width / 2, this.height / 2 - 10, this.width / 2, this.height / 2, 0, 0, TAU);
-            context.fill();
+            context.drawImage(MovingPlatform.sprite, 0, -10, Platform.width, Platform.height + 20);
 
             for (let i = MovingPlatform.lightSprites.length; i--; ) {
                 const lightDirection = MovingPlatform.lightsAngle * i;
@@ -1190,7 +1273,7 @@ let spsCounter: number = 0;
 let fpsCounter: number = 0;
 */
 
-const render = (state: GameState, context: IntContext) => {
+const render = (state: GameState, context: WrappedContext) => {
     context.save();
     context.translate(0, canvas.height / 2);
     context.translate(0, -WORLD_SIZE * scene.scale / 2);
@@ -1201,7 +1284,7 @@ const render = (state: GameState, context: IntContext) => {
     context.clip();
 
     context.translate(canvas.width / 2, 0);
-    context.scale(scene.scale);
+    context.scale(scene.scale, scene.scale);
     context.translate(-WORLD_SIZE / 2, 0);
 
     context.translate(-state.screenArea.left, -state.screenArea.top);
@@ -1217,11 +1300,11 @@ const render = (state: GameState, context: IntContext) => {
     context.restore();
 
     context.save();
-    context.scale(scene.scale);
+    context.scale(scene.scale, scene.scale);
     const highScore = `HI-SCORE ${state.highScore.toString().padStart(6, '0')}`;
     const score = `SCORE    ${state.score.toString().padStart(6, '0')}`;
     context.textBaseline = 'top';
-    context.setFont(1000, 40, 'monospace');
+    setFont(context, 1000, 40, 'monospace');
     context.lineWidth = 5;
     context.strokeStyle = '#333';
     context.strokeText(highScore, 20, 20);
@@ -1245,8 +1328,6 @@ export const createGame = ({rockets = false}) => {
     let currentStep: number = 0;
 
     const state = new GameState();
-    const intContext = new IntContext(context);
-
     state.backgroundY = background.getHeight() * random();
     state.player.position.x = (WORLD_SIZE - state.player.width) / 2;
     state.player.position.y = 10;
@@ -1263,8 +1344,13 @@ export const createGame = ({rockets = false}) => {
     const animate = (currentTime: number) => {
         state.updateScore();
 
+        const canvasContext = canvas.getContext('2d');
+        // canvasContext.imageSmoothingEnabled = false;
+        // canvasContext.imageSmoothingQuality = 'low';
+        const context = wrapContext(canvasContext);
+        canvas.width = canvas.width; // This seems to be faster than clearRect for some reason
         background.draw(context, state.backgroundY, canvas.width, canvas.height);
-        render(state, intContext);
+        render(state, context);
 
         const timeGap = min(500, currentTime - state.previousTime + gameTimeGap);
         const stepsTorun = (timeGap * STEPS_PER_MILISECOND) | 0;

@@ -1,3 +1,4 @@
+import { WrappedContext } from "./Game";
 import { random, TAU } from "./Globals";
 
 const randomIntBetween = (min: number, max: number): number => min + Math.floor((max - min) * random());
@@ -190,7 +191,7 @@ export const createBackgroundPattern = () => {
         increment,
         getHeight,
         canvas: patternCanvas,
-        draw: (context: CanvasRenderingContext2D, yOffset: number, width: number, height: number) => {
+        draw: (context: WrappedContext, yOffset: number, width: number, height: number) => {
             const relativeHeight = getHeight() * width / patternCanvas.width;
             for (let offset = (-10000 * relativeHeight + yOffset) % relativeHeight; offset < height; offset += relativeHeight) {
                 context.drawImage(patternCanvas, 0, 0, patternCanvas.width, getHeight(), 0, offset, width, relativeHeight);

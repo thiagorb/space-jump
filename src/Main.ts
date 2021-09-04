@@ -1,13 +1,13 @@
 import { soundPlayer } from "./Audio";
 import { getBackground } from "./Background";
-import { createGame, IntContext, Player } from "./Game";
-import { canvas, context, keyboard, keyboardMap, scene, TAU, WORLD_SIZE } from "./Globals";
+import { createGame, wrapContext as wrapContext, Player } from "./Game";
+import { canvas, keyboard, keyboardMap, random, scene, TAU, WORLD_SIZE } from "./Globals";
 import { LocalStorage } from "./LocalStorage";
 
 const resize = () => {
     const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')
-    canvas.width = document.body.clientWidth * window.devicePixelRatio;
-    canvas.height = document.body.clientHeight * window.devicePixelRatio;
+    canvas.width = document.body.clientWidth * 0.5// window.devicePixelRatio;
+    canvas.height = document.body.clientHeight * 0.5// window.devicePixelRatio;
     const vMin = Math.min(document.body.clientWidth, document.body.clientHeight) / 100;
     document.documentElement.style.fontSize = `${vMin}px`;
 
@@ -122,19 +122,19 @@ export const activateMenu = () => {
     player.position.x = 250;
     player.position.y = 400;
 
-    let backgroundY = 0; // background.getHeight() * random();
+    let backgroundY = background.getHeight() * random();
     let previousTime = null;
-    const intContext = new IntContext(context);
     const renderBackground = (time: number) => {
+        const context = wrapContext(canvas.getContext('2d'));
         background.draw(context, backgroundY, canvas.width, canvas.height);
 
-        intContext.save();
-        intContext.translate(canvas.width / 2, canvas.height / 2);
-        intContext.scale(scene.scale);
-        intContext.translate(-WORLD_SIZE / 2, -WORLD_SIZE / 2);
+        context.save();
+        context.translate(canvas.width / 2, canvas.height / 2);
+        context.scale(scene.scale, scene.scale);
+        context.translate(-WORLD_SIZE / 2, -WORLD_SIZE / 2);
 
-        player.render(intContext);
-        intContext.restore();
+        player.render(context);
+        context.restore();
 
         if (previousTime) {
             backgroundY += (time - previousTime) * 0.01;
