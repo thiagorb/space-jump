@@ -1357,9 +1357,11 @@ export const createGame = ({rockets = false}) => {
         gameTimeGap = timeGap - (stepsTorun / STEPS_PER_MILISECOND);
         //spsCounter += stepsTorun;
         state.previousTime = currentTime;
-        const targetStep = currentStep + stepsTorun;
-        for (; currentStep < targetStep; currentStep++) {
-            state.tick();
+        if (!state.paused) {
+            const targetStep = currentStep + stepsTorun;
+            for (; currentStep < targetStep; currentStep++) {
+                state.tick();
+            }
         }
 
         if (!state.ending && state.player.top > state.screenArea.bottom && state.player.speed.y >= state.screenArea.speed) {
@@ -1372,7 +1374,7 @@ export const createGame = ({rockets = false}) => {
         start: () => {
             document.body.classList.add('playing');
             soundPlayer.playGameStart();
-            game.resumeLoop();
+            game.startLoop();
         },
 
         animate,
@@ -1382,14 +1384,13 @@ export const createGame = ({rockets = false}) => {
         loop: (currentTime: number) => {
             game.animate(currentTime);
 
-            if (!game.state.over && !game.state.paused) {
+            if (!game.state.over) {
                 window.requestAnimationFrame(game.loop);
             }
         },
 
-        resumeLoop: () => {
+        startLoop: () => {
             document.body.classList.add('playing');
-            game.state.paused = false;
             window.requestAnimationFrame((currentTime: number) => {
                 state.previousTime = currentTime;
                 game.loop(currentTime);
@@ -1399,6 +1400,11 @@ export const createGame = ({rockets = false}) => {
         pause: () => {
             document.body.classList.remove('playing');
             state.paused = true;
+        },
+
+        unpause: () => {
+            document.body.classList.add('playing');
+            state.paused = false;
         },
 
         end: () => {

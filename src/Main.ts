@@ -485,7 +485,7 @@ const unpause = async () => {
     disableCursor();
     await wait(300);
     pauseScreen.style.zIndex = null;
-    activeGame.resumeLoop();
+    activeGame.unpause();
 };
 
 const togglePause = () => {
