@@ -1159,6 +1159,17 @@ class MovingPlatform extends Platform {
     }
 }
 
+interface LevelConfig {
+    minStaticPlatform: number;
+    maxStaticPlatform: number;
+    minRocket: number;
+    maxRocket: number;
+    minMovingPlatform: number;
+    maxMovingPlatform: number;
+    minIcePlatform: number;
+    maxIcePlatform: number;
+}
+
 class GameState {
     paused: boolean = false;
     ending: boolean = false;
@@ -1175,6 +1186,165 @@ class GameState {
     highScore: number = LocalStorage.get().highScore;
     score: number = 0;
     rockets: boolean = false;
+    public static normalMode = () => {
+        let level = 0;
+        let createdPlatforms = 0;
+
+        const initialLevels = [
+            {
+                platformCount: 9,
+                minStaticPlatform: 0,
+                maxStaticPlatform: 1,
+                minRocket: 0,
+                maxRocket: 0,
+                minMovingPlatform: 0,
+                maxMovingPlatform: 0,
+                minIcePlatform: 0,
+                maxIcePlatform: 0,
+            },
+            {
+                platformCount: 1,
+                minStaticPlatform: 0,
+                maxStaticPlatform: 1,
+                minRocket: 0,
+                maxRocket: 1,
+                minMovingPlatform: 0,
+                maxMovingPlatform: 0,
+                minIcePlatform: 0,
+                maxIcePlatform: 0,
+            },
+            {
+                platformCount: 10,
+                minStaticPlatform: 0,
+                maxStaticPlatform: 1,
+                minRocket: 0,
+                maxRocket: 0,
+                minMovingPlatform: 0,
+                maxMovingPlatform: 0,
+                minIcePlatform: 0,
+                maxIcePlatform: 0,
+            },
+            {
+                platformCount: 20,
+                minStaticPlatform: 0,
+                maxStaticPlatform: 0.5,
+                minRocket: 0,
+                maxRocket: 0,
+                minMovingPlatform: 0,
+                maxMovingPlatform: 0,
+                minIcePlatform: 0.5,
+                maxIcePlatform: 1,
+            },
+            {
+                platformCount: 20,
+                minStaticPlatform: 0,
+                maxStaticPlatform: 0.5,
+                minRocket: 0,
+                maxRocket: 0,
+                minMovingPlatform: 0.5,
+                maxMovingPlatform: 1,
+                minIcePlatform: 0,
+                maxIcePlatform: 0,
+            }
+        ];
+
+        const levelConfigs = [
+            // all mixed
+            {
+                platformCount: 30,
+                minStaticPlatform: 0,
+                maxStaticPlatform: 0.6,
+                minRocket: 0,
+                maxRocket: 0.1,
+                minMovingPlatform: 0.6,
+                maxMovingPlatform: 0.9,
+                minIcePlatform: 0.9,
+                maxIcePlatform: 1.0,
+            },
+            // only moving platforms
+            {
+                platformCount: 10,
+                minStaticPlatform: 0,
+                maxStaticPlatform: 0,
+                minRocket: 0,
+                maxRocket: 0,
+                minMovingPlatform: 0,
+                maxMovingPlatform: 1,
+                minIcePlatform: 0,
+                maxIcePlatform: 0,
+            },
+            // only ice
+            {
+                platformCount: 30,
+                minStaticPlatform: 0,
+                maxStaticPlatform: 0,
+                minRocket: 0,
+                maxRocket: 0,
+                minMovingPlatform: 0,
+                maxMovingPlatform: 0,
+                minIcePlatform: 0,
+                maxIcePlatform: 1,
+            },
+            // half ice, half moving
+            {
+                platformCount: 30,
+                minStaticPlatform: 0,
+                maxStaticPlatform: 0,
+                minRocket: 0,
+                maxRocket: 0,
+                minMovingPlatform: 0,
+                maxMovingPlatform: 0.5,
+                minIcePlatform: 0.5,
+                maxIcePlatform: 1,
+            },
+            // mixed with extra rockets
+            {
+                platformCount: 50,
+                minStaticPlatform: 0,
+                maxStaticPlatform: 0.7,
+                minRocket: 0,
+                maxRocket: 0.7,
+                minMovingPlatform: 0.6,
+                maxMovingPlatform: 0.9,
+                minIcePlatform: 0.9,
+                maxIcePlatform: 1.0,
+            }
+        ];
+
+        return () => {
+            let currentLevel;
+            if (level < initialLevels.length) {
+                currentLevel = initialLevels[level];
+                createdPlatforms++;
+                if (currentLevel.platformCount === createdPlatforms) {
+                    level++;
+                    createdPlatforms = 0;
+                }
+            } else {
+                currentLevel = levelConfigs[level - initialLevels.length];
+                createdPlatforms++;
+                if (currentLevel.platformCount === createdPlatforms) {
+                    level = initialLevels.length + (random() * levelConfigs.length | 0);
+                    createdPlatforms = 0;
+                }
+            }
+
+            return currentLevel;
+        };
+    };
+
+    public static rocketsMode = () => () => ({
+        minStaticPlatform: 0,
+        maxStaticPlatform: 0.6,
+        minRocket: 0,
+        maxRocket: 0.6,
+        minMovingPlatform: 0.6,
+        maxMovingPlatform: 0.9,
+        minIcePlatform: 0.9,
+        maxIcePlatform: 1.0,
+    });
+
+    levelConfig: () => LevelConfig = GameState.normalMode();
 
     tick() {
         if (keyboard.arrowDown && !this.ignorePlatform) {
@@ -1198,11 +1368,16 @@ class GameState {
         if (this.screenArea.top - WORLD_SIZE < this.nextPlatformTop) {
             let platform: Platform;
             const type = random();
-            if (type < 0.1) {
+            const levelConfig = this.levelConfig();
+            if (type >= levelConfig.minIcePlatform && type < levelConfig.maxIcePlatform) {
                 platform = new IcePlatform();
-            } else if (type < 0.4) {
+            }
+
+            if (type >= levelConfig.minMovingPlatform && type < levelConfig.maxMovingPlatform) {
                 platform = new MovingPlatform();
-            } else {
+            }
+
+            if (type >= levelConfig.minStaticPlatform && type < levelConfig.maxStaticPlatform) {
                 platform = new StaticPlatform();
             }
 
@@ -1212,7 +1387,7 @@ class GameState {
             this.previousPlatformX = platform.position.x;
             this.nextPlatformTop = this.nextPlatformTop - 100 - random() * 50;
 
-            if (type > 0.9 || (this.rockets && type >= 0.4)) {
+            if (type >= levelConfig.minRocket && type < levelConfig.maxRocket) {
                 const rocket = new Rocket();
                 rocket.position.x = platform.left + (platform.width - rocket.width) * random();
                 rocket.position.y = platform.top - rocket.height;
@@ -1221,7 +1396,6 @@ class GameState {
         }
 
         this.player.tick(this);
-
 
         for (let layerIndex = this.objectLayers.length; layerIndex--; ) {
             const layer = this.objectLayers[layerIndex];
@@ -1331,7 +1505,7 @@ export const createGame = ({rockets = false}) => {
     state.backgroundY = background.getHeight() * random();
     state.player.position.x = (WORLD_SIZE - state.player.width) / 2;
     state.player.position.y = 10;
-    state.rockets = rockets;
+    state.levelConfig = rockets ? GameState.rocketsMode() : GameState.normalMode();
 
     {
         const platform = new StaticPlatform();
