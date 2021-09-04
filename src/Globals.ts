@@ -25,3 +25,9 @@ export const keyboardMap: Map<string, keyof typeof keyboard> = new Map([
     ['KeyD', 'arrowRight'],
     ['Enter', 'enter'],
 ]);
+
+export const enum GraphicsQuality {
+    High = 1,
+    Medium = 2,
+    Low = 3
+};

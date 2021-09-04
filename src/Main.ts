@@ -1,13 +1,13 @@
 import { soundPlayer } from "./Audio";
 import { getBackground } from "./Background";
 import { createGame, wrapContext as wrapContext, Player } from "./Game";
-import { canvas, keyboard, keyboardMap, random, scene, TAU, WORLD_SIZE } from "./Globals";
+import { canvas, GraphicsQuality, keyboard, keyboardMap, random, scene, TAU, WORLD_SIZE } from "./Globals";
 import { LocalStorage } from "./LocalStorage";
 
 const resize = () => {
     const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')
-    canvas.width = document.body.clientWidth * 0.5// window.devicePixelRatio;
-    canvas.height = document.body.clientHeight * 0.5// window.devicePixelRatio;
+    canvas.width = document.body.clientWidth * window.devicePixelRatio / graphicsQuality;
+    canvas.height = document.body.clientHeight * window.devicePixelRatio / graphicsQuality;
     const vMin = Math.min(document.body.clientWidth, document.body.clientHeight) / 100;
     document.documentElement.style.fontSize = `${vMin}px`;
 
@@ -161,13 +161,32 @@ const deactivateMenu = () => {
 };
 
 const updateAudioText = () => {
-    document.querySelector('#audio').setAttribute('data-text', `AUDIO ${soundPlayer.enabled ? 'YES' : 'NO'}`);
+    document.querySelector('#audio .setting').setAttribute('data-text', soundPlayer.enabled ? 'YES' : 'NO');
+}
+
+const graphicsQualityText = new Map<GraphicsQuality, string>([
+    [GraphicsQuality.High, 'HIGH'],
+    [GraphicsQuality.Medium, 'MEDIUM'],
+    [GraphicsQuality.Low, 'LOW'],
+]);
+let graphicsQuality = GraphicsQuality.High;
+
+const updateGraphicsText = () => {
+    document.querySelector('#graphics .setting').setAttribute('data-text', graphicsQualityText.get(graphicsQuality));
 }
 
 const setAudioActive = (value: boolean) => {
     LocalStorage.update(storage => storage.audio = soundPlayer.enabled = value);
     updateAudioText();
 }
+
+const toggleGraphicsQuality = () => {
+    graphicsQuality = 1 + (graphicsQuality) % 3;
+    console.log(graphicsQuality);
+    LocalStorage.update(storage => storage.graphicsQuality = graphicsQuality);
+    updateGraphicsText();
+    resize();
+};
 
 export const waitNextFrame = () => new Promise(window.requestAnimationFrame);
 const wait = (time: number) => new Promise(resolve => setTimeout(resolve, time));
@@ -326,6 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const goToMenu = () => {
         activateMenu();
         updateAudioText();
+        updateGraphicsText();
         drawLogo();
         fadeInTransition(500);
     };
@@ -341,6 +361,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelector('#audio').addEventListener('click', () => {
         setAudioActive(!soundPlayer.enabled);
+    });
+
+    document.querySelector('#graphics').addEventListener('click', () => {
+        toggleGraphicsQuality();
     });
 
     document.querySelector('#fullscreen').addEventListener('click', async () => {

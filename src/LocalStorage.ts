@@ -1,7 +1,10 @@
+import { GraphicsQuality } from "./Globals";
+
 interface LocalStorageData {
     highScore: number;
     audio: boolean;
     fullscreen: boolean;
+    graphicsQuality: GraphicsQuality
 }
 
 let backup: LocalStorageData = null;
@@ -15,11 +18,12 @@ export const LocalStorage = {
             console.error('Failed to load data from local storage', error);
         }
 
-        if (!backup || typeof backup.highScore !== 'number' || typeof backup.audio !== 'boolean' || typeof backup.fullscreen !== 'boolean') {
+        if (!backup || typeof backup.highScore !== 'number' || typeof backup.audio !== 'boolean' || typeof backup.fullscreen !== 'boolean' || typeof backup.graphicsQuality !== 'number') {
             backup = {
                 highScore: 0,
                 audio: true,
                 fullscreen: true,
+                graphicsQuality: GraphicsQuality.High,
             };
         }
 
