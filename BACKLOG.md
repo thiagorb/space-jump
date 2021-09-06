@@ -1,5 +1,3 @@
-add music
-add alternative controls for mobile
 add enemy (alien)?
 add collectible items (that give extra score)
 add slow motion power up

@@ -7,6 +7,7 @@ class SoundPlayer {
         gameStart: [0.2,0,2079,.07,.18,2.48,1,.82,1,9.1,2050,.09,.09,,2,,.16,.45,.09],
         gameOver: [0.2,,2079,.07,.18,2.48,1,.82,1,9.1,-81,.09,.09,.1,,,,.45,.09,.24],
         click: [1,0,800,,,0,,,,,,,,,,,,0,.01],
+        alert: [0.1,0,1280,,.08,.16,2,.7,,,696,,,,30,,.1,.7,.07],
     }
 
     samples = {};
@@ -48,6 +49,7 @@ class SoundPlayer {
     playGameStart = this.throttle(1000, 'gameStart');
     playGameOver = this.throttle(1000, 'gameOver');
     playClick = this.throttle(100, 'click');
+    playAlert = this.throttle(1000, 'alert');
 };
 
 export const soundPlayer = new SoundPlayer();

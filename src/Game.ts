@@ -13,7 +13,7 @@ const JUMP_SPEED = 1200 * SPEED_UNIT;
 const TERMINAL_VELOCITY = 1000 * SPEED_UNIT;
 const SPRITES_SCALE = 2;
 const { cos, sin, max, min, abs, PI } = Math;
-const sign = (value: number): (-1 | 0 | 1) => value > 0 ? 1: (value < 0 ? -1 : 0);
+const sign = (value: number): (-1 | 0 | 1) => value > 0 ? 1 : (value < 0 ? -1 : 0);
 const between = (lower: number, upper: number, value: number) => max(lower, min(upper, value));
 
 /*
@@ -248,7 +248,7 @@ interface Vector2D {
 }
 
 abstract class GameObject {
-    position: Vector2D = {x: 0, y: 0};
+    position: Vector2D = { x: 0, y: 0 };
 
     get bottom() {
         return this.position.y + this.height;
@@ -293,8 +293,8 @@ class RoundShape {
 
     constructor(x1: number, y1: number, x2: number, y2: number, width: number) {
         this.width = width;
-        this.begin = {x: x1, y: y1};
-        this.end = {x: x2, y: y2};
+        this.begin = { x: x1, y: y1 };
+        this.end = { x: x2, y: y2 };
     }
 }
 
@@ -333,34 +333,50 @@ const drawRoundShape = (context: WrappedContext, roundShape: RoundShape) => {
     }
 };
 
-const rocketParticles = () => {
-    const lifeTime = 20;
-    const maxParticles: number = 250;
-    const particles = [...new Array(maxParticles)].map(() => ({
-        speed: {
-            x: 0,
-            y: 0,
-        },
-        x: 0,
-        y: 0,
-        time: 0,
-    }));
+interface Color {
+    r: number,
+    g: number,
+    b: number,
+    a: number
+}
 
-    const maxRadius = 50;
+const createParticlesMaker = (
+    {
+        lifeTime,
+        maxParticles,
+        maxRadius,
+        speed,
+        direction,
+        scale,
+        mainAxisShift,
+        colorOverTime,
+    }:
+        {
+            lifeTime: number,
+            maxParticles: number,
+            maxRadius: number,
+            speed: number,
+            direction: number,
+            scale: number,
+            mainAxisShift: number,
+            colorOverTime: (progress: number) => Color
+        }
+) => {
+    const directionCos = cos(direction);
+    const directionSin = sin(direction);
     const spriteSize = 2 * maxRadius;
-    const spriteScaledSize = 0.5 * spriteSize;
+    const spriteScaledSize = scale * spriteSize;
     const sprite = (() => {
         const canvas = document.createElement('canvas');
         canvas.width = spriteSize;
         canvas.height = spriteSize * lifeTime;
         const context = canvas.getContext('2d');
-        for (let i = lifeTime; i--; ) {
+        for (let i = lifeTime; i--;) {
             const progress = i / lifeTime;
-            const yellow = 255 * min(1, 1 - 2 * progress);
-            const decay = between(0, 1, 1 - progress);
-            const radius = maxRadius * (1 - abs(0.3 - progress));
-            context.fillStyle = `rgba(${255 * decay}, ${yellow * decay}, 0, ${0.3 * decay})`;
+            const color = colorOverTime(progress);
+            context.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${color.a})`;
             context.beginPath();
+            const radius = maxRadius * (1 - abs(0.3 - progress));
             context.arc(maxRadius, maxRadius + spriteSize * i, radius, 0, TAU);
             context.closePath();
             context.fill();
@@ -368,22 +384,36 @@ const rocketParticles = () => {
         return canvas;
     })();
 
-    let aliveParticles = 0;
 
-    return {
-        add: (x: number, y: number) => {
+    const make = () => {
+        const particles = [...new Array(maxParticles)].map(() => ({
+            speed: {
+                x: 0,
+                y: 0,
+            },
+            x: 0,
+            y: 0,
+            time: 0,
+        }));
+
+        let aliveParticles = 0;
+
+        const add = (x: number, y: number) => {
             for (let i = 0; i < 10; i++) {
                 aliveParticles = min(aliveParticles + 1, particles.length - 1);
                 const particle = particles[aliveParticles - 1];
-                particle.speed.x = (0.5 - random()) * 3;
-                particle.speed.y = 10 + i;
-                particle.x = x + (0.5 - random()) * 10;
-                particle.y = y + 3 * i;
+                const mainAxisSpeed = (speed + i);
+                const crossAxisSpeed = (0.5 - random()) * 3;
+                particle.speed.x = mainAxisSpeed * directionCos + crossAxisSpeed * directionSin;
+                particle.speed.y = -mainAxisSpeed * directionSin + crossAxisSpeed * directionCos;
+                const crossAxisShift = (0.5 - random()) * 10;
+                particle.x = x - spriteScaledSize / 2 + mainAxisShift * i * directionCos + crossAxisShift * directionSin;
+                particle.y = y - spriteScaledSize / 2 - mainAxisShift * i * directionSin + crossAxisShift * directionCos;
                 particle.time = 0;
             }
-        },
+        };
 
-        render: (context: WrappedContext) => {
+        const render = (context: WrappedContext) => {
             if (aliveParticles === 0) {
                 return;
             }
@@ -416,8 +446,8 @@ const rocketParticles = () => {
                     particle.time * spriteSize,
                     spriteSize,
                     spriteSize,
-                    (particle.x - spriteScaledSize / 2) * scaleX | 0,
-                    (particle.y - spriteScaledSize / 2) * scaleY | 0,
+                    particle.x * scaleX | 0,
+                    particle.y * scaleY | 0,
                     spriteScaledSize * scaleX | 0,
                     spriteScaledSize * scaleY | 0
                 );
@@ -428,8 +458,12 @@ const rocketParticles = () => {
             }
 
             context.restore();
-        }
-    }
+        };
+
+        return { add, render };
+    };
+
+    return { make };
 };
 
 const enum AnimationProperty {
@@ -445,7 +479,7 @@ const enum AnimationId {
     Rising = 4,
 };
 
-type AnimationFrames = Array<{[property: number]: number} | {goTo: AnimationId}>
+type AnimationFrames = Array<{ [property: number]: number } | { goTo: AnimationId }>
 
 const animationsList: Array<[AnimationId, AnimationFrames]> = [
     [
@@ -509,18 +543,19 @@ const animationsList: Array<[AnimationId, AnimationFrames]> = [
                 [AnimationProperty.ArmsRotation]: -PI / 2 - 0.3
             },
         ]
-    ]
+    ],
 ];
 const animations = new Map<AnimationId, AnimationFrames>(animationsList);
 
 export class Player extends GameObject {
-    speed: Vector2D = {x: 0, y: 0};
+    speed: Vector2D = { x: 0, y: 0 };
     width: number = 70;
     height: number = 150;
     direction: number = 1;
     rocket: boolean = false;
     jumpGrace: number = 0;
     high: number = Infinity;
+    dead: boolean = false;
 
     legGap = 0.25;
     armGap = 0.5;
@@ -532,17 +567,28 @@ export class Player extends GameObject {
     leftArm = new RoundShape(-this.armGap * 0.8, -0.1, -this.armGap, 0.3, 0.4);
     rightArm = new RoundShape(this.armGap * 0.8, -0.1, this.armGap, 0.3, 0.4);
 
-    rocketParticles = rocketParticles();
+    rocketParticles = createParticlesMaker({
+        lifeTime: 20,
+        maxParticles: 250,
+        maxRadius: 25,
+        speed: 10,
+        direction: -PI / 2,
+        scale: 1,
+        mainAxisShift: 3,
+        colorOverTime: (progress: number) => {
+            const yellow = 255 * min(1, 1 - 2 * progress);
+            const decay = between(0, 1, 1 - progress);
+            return { r: 255 * decay, g: yellow * decay, b: 0, a: 0.3 * decay };
+        },
+    }).make();
 
     animationState = {
         [AnimationProperty.LegsRotation]: -PI / 2,
         [AnimationProperty.ArmsRotation]: -PI / 2,
     };
 
-    animationSpeed = {
-        [AnimationProperty.LegsRotation]: 0.12,
-        [AnimationProperty.ArmsRotation]: 0.12,
-    };
+    private animationSpeed = 0.12;
+    private deadAnimationSpeed = 0.04;
 
     animation: AnimationId = AnimationId.Rest;
     currentFrame = 0;
@@ -560,12 +606,14 @@ export class Player extends GameObject {
         }
 
         let reachedFrame = true;
+        const animationSpeed = this.dead ? this.deadAnimationSpeed : this.animationSpeed;
         for (const key in this.animationState) {
-            if (abs(frame[key] - this.animationState[key]) < this.animationSpeed[key]) {
+            const delta = frame[key] - this.animationState[key];
+            if (abs(delta) < animationSpeed) {
                 this.animationState[key] = frame[key];
             } else {
                 reachedFrame = false;
-                this.animationState[key] += this.animationSpeed[key] * sign(frame[key] - this.animationState[key]);
+                this.animationState[key] += animationSpeed * sign(delta);
             }
         }
 
@@ -658,37 +706,37 @@ export class Player extends GameObject {
     tick(state: GameState) {
         const horizontalAccel = ACCELERATION_UNIT * 2000;
         const maxHorizontalSpeed = SPEED_UNIT * 500;
-        const previousSpeed = state.player.speed.y;
+        const previousSpeed = this.speed.y;
 
-        if (!state.ending && keyboard.arrowLeft) {
-            state.player.speed.x = max(-maxHorizontalSpeed, state.player.speed.x - horizontalAccel);
-            state.player.direction = -1;
-            state.player.animation = AnimationId.Run;
-        } else if (!state.ending && keyboard.arrowRight) {
-            state.player.speed.x = min(maxHorizontalSpeed, state.player.speed.x + horizontalAccel);
-            state.player.direction = 1;
-            state.player.animation = AnimationId.Run;
+        if (!this.dead && keyboard.arrowLeft) {
+            this.speed.x = max(-maxHorizontalSpeed, this.speed.x - horizontalAccel);
+            this.direction = -1;
+            this.animation = AnimationId.Run;
+        } else if (!this.dead && keyboard.arrowRight) {
+            this.speed.x = min(maxHorizontalSpeed, this.speed.x + horizontalAccel);
+            this.direction = 1;
+            this.animation = AnimationId.Run;
         } else {
-            state.player.speed.x = abs(state.player.speed.x) > horizontalAccel
-                ? state.player.speed.x - sign(state.player.speed.x) * horizontalAccel
+            this.speed.x = abs(this.speed.x) > horizontalAccel
+                ? this.speed.x - sign(this.speed.x) * horizontalAccel
                 : 0;
 
             if (state.onPlatform) {
-                state.player.animation = AnimationId.Rest;
+                this.animation = AnimationId.Rest;
             }
         }
 
         if (!state.onPlatform) {
-            state.player.speed.y = min(TERMINAL_VELOCITY, state.player.speed.y + GRAVITY);
-        } else if (state.player.speed.y > 0) {
-            state.player.speed.y = 0;
+            this.speed.y = min(TERMINAL_VELOCITY, this.speed.y + GRAVITY);
+        } else if (this.speed.y > 0) {
+            this.speed.y = 0;
         }
 
-        if ((state.onPlatform || this.jumpGrace > 0) && !state.ending && keyboard.arrowUp) {
+        if ((state.onPlatform || this.jumpGrace > 0) && !this.dead && keyboard.arrowUp) {
             this.jumpGrace = 0;
-            state.player.speed.y = -JUMP_SPEED;
-            state.player.animation = AnimationId.Jump;
-            state.player.currentFrame = 0;
+            this.speed.y = -JUMP_SPEED;
+            this.animation = AnimationId.Jump;
+            this.currentFrame = 0;
             soundPlayer.playJump();
         }
 
@@ -696,23 +744,31 @@ export class Player extends GameObject {
             this.jumpGrace = 85 * STEPS_PER_MILISECOND;
         } else {
             this.jumpGrace = max(0, this.jumpGrace - 1);
-            if (state.player.speed.y > 0) {
-                state.player.animation = AnimationId.Falling;
-            } else if (state.player.animation !== AnimationId.Jump) {
-                if (state.player.rocket) {
-                    state.player.animation = AnimationId.Rising;
+            if (this.speed.y > 0) {
+                this.animation = AnimationId.Falling;
+            } else if (this.animation !== AnimationId.Jump) {
+                if (this.rocket) {
+                    this.animation = AnimationId.Rising;
                 } else {
-                    state.player.animation = AnimationId.Rest;
+                    this.animation = AnimationId.Rest;
                 }
             }
         }
 
-        state.player.position.x += state.player.speed.x;
-        state.player.position.y += state.player.speed.y;
+        this.position.x += this.speed.x;
+        this.position.y += this.speed.y;
 
-        if (previousSpeed <= 0 && state.player.speed.y >= 0) {
-            state.player.high = state.player.bottom;
+        if (previousSpeed <= 0 && this.speed.y >= 0) {
+            this.high = this.bottom;
         }
+
+        if (this.top > state.screenArea.bottom && this.speed.y >= state.screenArea.speed) {
+            this.die();
+        }
+    }
+
+    die() {
+        this.dead = true;
     }
 }
 
@@ -723,6 +779,124 @@ abstract class InteractiveObject extends GameObject {
     abstract render(context: WrappedContext): void;
     tick(state: GameState) { }
     preTick(state: GameState) { }
+}
+
+class Alert extends InteractiveObject {
+    width: number = 0;
+    height: number = 0;
+    visualAlert: number = 0;
+    alpha: number = 0;
+
+    render(context: WrappedContext) {
+        context.save();
+        context.resetTransform();
+        const gradient = context.createLinearGradient(0, 0, 0, canvas.height * 0.2);
+        context.globalAlpha = this.alpha;
+        gradient.addColorStop(0, 'rgba(255, 0, 0, 0.5)')
+        gradient.addColorStop(0.3, 'rgba(255, 0, 0, 0.2)')
+        gradient.addColorStop(1, 'rgba(255, 0, 0, 0)')
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, canvas.width, canvas.height * 0.2);
+        context.restore();
+        this.visualAlert++;
+    }
+
+    tick(state: GameState) {
+        this.alpha = Math.abs((this.visualAlert % Comet.period) / Comet.period - 0.5);
+        if (this.bottom > state.screenArea.top && this.alpha < 0.1) {
+            state.removeObject(this);
+        }
+    }
+}
+
+class Comet extends InteractiveObject {
+    public static radius: number = 25;
+    width: number = Comet.radius * 2;
+    height: number = Comet.radius * 2;
+    public static period = STEPS_PER_SECOND;
+    private static tailDirection = PI / 8;
+
+    private static particlesMaker = createParticlesMaker({
+        lifeTime: 20,
+        maxParticles: 250,
+        maxRadius: Comet.radius / 3,
+        direction: Comet.tailDirection,
+        speed: 30,
+        scale: 6,
+        mainAxisShift: 10,
+        colorOverTime: (progress: number) => {
+            const hueShift = 255 * min(1, 1 - 2 * progress);
+            const decay = between(0, 1, 1 - progress);
+            return { r: 255 * decay, g: hueShift * decay, b: 255, a: 0.05 * decay };
+        },
+    });
+
+    private particles = Comet.particlesMaker.make();
+
+    private static sprite = (() => {
+        const spreadFactor = 2;
+        const distanceBetweenCenters = Comet.radius * 8;
+        const canvas = document.createElement('canvas');
+        const width = Comet.radius + distanceBetweenCenters * cos(Comet.tailDirection) + Comet.radius * spreadFactor;
+        const height = Comet.radius + distanceBetweenCenters * sin(Comet.tailDirection) + Comet.radius * spreadFactor;
+        canvas.width = SPRITES_SCALE * width;
+        canvas.height = SPRITES_SCALE * height;
+        const context = canvas.getContext('2d');
+        context.scale(SPRITES_SCALE, SPRITES_SCALE);
+
+        const radius1 = Comet.radius;
+        const center1X = Comet.radius;
+        const center1Y = height - Comet.radius;
+        context.beginPath();
+        context.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        context.arc(center1X, center1Y, Comet.radius * 0.8, 0, TAU);
+        context.fill();
+
+        for (let i = 0; i < 500; i++) {
+            const dir = random() * TAU;
+            const distance = random() * 0.8;
+            const gradient = context.createLinearGradient(0, 0, 1.5 * distanceBetweenCenters * random(), 0);
+            gradient.addColorStop(0, `rgba(255, 255, 255, 0.2)`);
+            gradient.addColorStop(0.2, `rgba(255, 255, 255, 0.01)`);
+            gradient.addColorStop(1, `rgba(255, 255, 255, 0.0)`);
+            context.fillStyle = gradient;
+            context.save();
+            context.translate(center1X + distance * cos(dir) * radius1, center1Y - distance * sin(dir) * radius1);
+            context.moveTo(0, 0);
+            context.rotate(-Comet.tailDirection + (0.5 - random()) * PI / 6);
+            context.fillRect(0, -5, distanceBetweenCenters * 2, 10);
+            context.restore();
+        }
+        return canvas;
+    })();
+
+    render(context: WrappedContext) {
+        this.particles.add(this.position.x + this.width / 2, this.position.y + this.height / 2);
+        this.particles.render(context);
+        context.drawImage(
+            Comet.sprite,
+            this.position.x,
+            this.position.y + this.height - Comet.sprite.height / SPRITES_SCALE,
+            Comet.sprite.width / SPRITES_SCALE,
+            Comet.sprite.height / SPRITES_SCALE
+        );
+    }
+
+    tick(state: GameState) {
+        if (this.boundBoxCollision(state.player)) {
+            state.player.die();
+        }
+
+        if (this.position.x < -WORLD_SIZE || this.position.y > state.screenArea.bottom + WORLD_SIZE / 2) {
+            state.removeObject(this);
+        }
+
+        if (!state.paused && this.top < state.player.bottom) {
+            soundPlayer.playAlert();
+        }
+
+        this.position.x -= 50 * SPEED_UNIT;
+    }
 }
 
 class Rocket extends InteractiveObject {
@@ -809,14 +983,14 @@ class Rocket extends InteractiveObject {
             state.removeObject(this);
         }
 
-        if (!state.ending && this.boundBoxCollision(state.player)) {
+        if (!state.player.dead && this.boundBoxCollision(state.player)) {
             soundPlayer.playRocket();
             state.player.speed.y = -1.5 * JUMP_SPEED;
             state.player.rocket = true;
             state.player.jumpGrace = 0;
 
             const deltaY = 1 - (state.player.top - state.screenArea.top) / WORLD_SIZE;
-            state.screenArea.speedBoost = min(0, -1.6 * deltaY * JUMP_SPEED    );
+            state.screenArea.speedBoost = min(0, -1.6 * deltaY * JUMP_SPEED);
         }
     }
 }
@@ -840,7 +1014,7 @@ abstract class Platform extends InteractiveObject {
     }
 
     preTick(state: GameState) {
-        if (this !== state.ignorePlatform && this.isPlayerOn(state.player)) {
+        if (this !== state.ignorePlatform && this.isPlayerOn(state.player) && !state.player.dead) {
             state.onPlatform = this;
             state.player.position.y = this.top - state.player.height;
         }
@@ -1038,12 +1212,12 @@ class IcePlatform extends Platform {
 class MovingPlatform extends Platform {
     private static lightSprites = (() => {
         const colors = [
-            {red: 255, green: 0, blue: 0},
-            {red: 255, green: 255, blue: 0},
-            {red: 0, green: 0, blue: 255},
+            { red: 255, green: 0, blue: 0 },
+            { red: 255, green: 255, blue: 0 },
+            { red: 0, green: 0, blue: 255 },
         ];
 
-        return colors.map(({red, green, blue}) => {
+        return colors.map(({ red, green, blue }) => {
             const lightCanvas = document.createElement('canvas');
             const side = 50;
             lightCanvas.width = side;
@@ -1068,7 +1242,7 @@ class MovingPlatform extends Platform {
             return lightCanvas;
         });
     })();
-    private static lightsAngle = Math.PI * 2 / MovingPlatform.lightSprites.length;
+    private static lightsAngle = TAU / MovingPlatform.lightSprites.length;
 
     private static sprite = (() => {
         const canvas = document.createElement('canvas');
@@ -1118,7 +1292,7 @@ class MovingPlatform extends Platform {
             context.save();
             context.translate(this.position.x, this.position.y);
 
-            for (let i = MovingPlatform.lightSprites.length; i--; ) {
+            for (let i = MovingPlatform.lightSprites.length; i--;) {
                 const lightDirection = MovingPlatform.lightsAngle * i;
                 if ((lightDirection + lightRotation) % TAU >= PI) {
                     renderLight(context, MovingPlatform.lightSprites[i], lightDirection);
@@ -1127,7 +1301,7 @@ class MovingPlatform extends Platform {
 
             context.drawImage(MovingPlatform.sprite, 0, -10, Platform.width, Platform.height + 20);
 
-            for (let i = MovingPlatform.lightSprites.length; i--; ) {
+            for (let i = MovingPlatform.lightSprites.length; i--;) {
                 const lightDirection = MovingPlatform.lightsAngle * i;
                 if ((lightDirection + lightRotation) % TAU < PI) {
                     renderLight(context, MovingPlatform.lightSprites[i], lightDirection);
@@ -1176,7 +1350,7 @@ class GameState {
     over: boolean = false;
     previousTime: number = 0;
     player: Player = new Player();
-    objectLayers: Array<Array<InteractiveObject>> = [[], []];
+    objectLayers: Array<Array<InteractiveObject>> = [[], [], []];
     screenArea: ScreenArea = new ScreenArea();
     nextPlatformTop: number = 0;
     previousPlatformX: number = 0;
@@ -1186,6 +1360,7 @@ class GameState {
     highScore: number = LocalStorage.get().highScore;
     score: number = 0;
     rockets: boolean = false;
+    nextComet: number = -10 * WORLD_SIZE;
     public static normalMode = () => {
         let level = 0;
         let createdPlatforms = 0;
@@ -1352,9 +1527,9 @@ class GameState {
         }
 
         this.onPlatform = null;
-        for (let layerIndex = this.objectLayers.length; layerIndex--; ) {
+        for (let layerIndex = this.objectLayers.length; layerIndex--;) {
             const layer = this.objectLayers[layerIndex];
-            for (let objectIndex = layer.length; objectIndex--; ) {
+            for (let objectIndex = layer.length; objectIndex--;) {
                 layer[objectIndex].preTick(this);
             }
         }
@@ -1395,11 +1570,22 @@ class GameState {
             }
         }
 
+        if (this.screenArea.top - 2 * Comet.radius < this.nextComet) {
+            const comet = new Comet();
+            const cometAlert = new Alert();
+            comet.position.x = cometAlert.position.x = (0.3 + random() * 0.7) * WORLD_SIZE;
+            comet.position.y = cometAlert.position.y = this.nextComet - WORLD_SIZE / 2;
+            this.addObject(comet, 0);
+            this.addObject(cometAlert, 2);
+
+            this.nextComet = this.nextComet - 10 * WORLD_SIZE;
+        }
+
         this.player.tick(this);
 
-        for (let layerIndex = this.objectLayers.length; layerIndex--; ) {
+        for (let layerIndex = this.objectLayers.length; layerIndex--;) {
             const layer = this.objectLayers[layerIndex];
-            for (let objectIndex = layer.length; objectIndex--; ) {
+            for (let objectIndex = layer.length; objectIndex--;) {
                 layer[objectIndex].tick(this);
             }
         }
@@ -1463,9 +1649,9 @@ const render = (state: GameState, context: WrappedContext) => {
 
     context.translate(-state.screenArea.left, -state.screenArea.top);
 
-    for (let layerIndex = state.objectLayers.length; layerIndex--; ) {
+    for (let layerIndex = state.objectLayers.length; layerIndex--;) {
         const layer = state.objectLayers[layerIndex];
-        for (let objectIndex = layer.length; objectIndex--; ) {
+        for (let objectIndex = layer.length; objectIndex--;) {
             layer[objectIndex].render(context);
         }
     }
@@ -1495,7 +1681,7 @@ const render = (state: GameState, context: WrappedContext) => {
     */
 };
 
-export const createGame = ({rockets = false}) => {
+export const createGame = ({ rockets = false }) => {
     const background = getBackground();
 
     let gameTimeGap = 0;
@@ -1538,7 +1724,7 @@ export const createGame = ({rockets = false}) => {
             }
         }
 
-        if (!state.ending && state.player.top > state.screenArea.bottom && state.player.speed.y >= state.screenArea.speed) {
+        if (!state.ending && state.player.dead) {
             game.end();
         }
         //fpsCounter++;
@@ -1584,6 +1770,7 @@ export const createGame = ({rockets = false}) => {
         end: () => {
             document.body.classList.remove('playing');
             state.ending = true;
+            state.player.die();
             soundPlayer.playGameOver();
             LocalStorage.update(storage => storage.highScore = max(storage.highScore, state.score));
             fadeOutTransition(3000).then(async () => {
