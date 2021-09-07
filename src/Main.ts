@@ -180,10 +180,8 @@ const setAudioActive = (value: boolean) => {
     updateAudioText();
 }
 
-const toggleGraphicsQuality = () => {
-    graphicsQuality = 1 + (graphicsQuality) % 3;
-    console.log(graphicsQuality);
-    LocalStorage.update(storage => storage.graphicsQuality = graphicsQuality);
+const setGraphicsQuality = (value: GraphicsQuality) => {
+    LocalStorage.update(storage => storage.graphicsQuality = graphicsQuality = value);
     updateGraphicsText();
     resize();
 };
@@ -345,7 +343,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const goToMenu = () => {
         activateMenu();
         updateAudioText();
-        updateGraphicsText();
         drawLogo();
         fadeInTransition(500);
     };
@@ -364,7 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.querySelector('#graphics').addEventListener('click', () => {
-        toggleGraphicsQuality();
+        setGraphicsQuality(1 + (graphicsQuality) % 3);
     });
 
     document.querySelector('#fullscreen').addEventListener('click', async () => {
@@ -480,6 +477,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initializeCursor();
     enableCursor();
+    setGraphicsQuality(LocalStorage.get().graphicsQuality);
 
     goToFullscreen();
 });
