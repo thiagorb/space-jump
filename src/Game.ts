@@ -384,7 +384,6 @@ const createParticlesMaker = (
         return canvas;
     })();
 
-
     const make = () => {
         const particles = [...new Array(maxParticles)].map(() => ({
             speed: {
@@ -398,15 +397,15 @@ const createParticlesMaker = (
 
         let aliveParticles = 0;
 
-        const add = (x: number, y: number) => {
-            for (let i = 0; i < 10; i++) {
+        const add = (x: number, y: number, count: number, crossAxisSpread: number) => {
+            for (let i = 0; i < count; i++) {
                 aliveParticles = min(aliveParticles + 1, particles.length - 1);
                 const particle = particles[aliveParticles - 1];
                 const mainAxisSpeed = (speed + i);
                 const crossAxisSpeed = (0.5 - random()) * 3;
                 particle.speed.x = mainAxisSpeed * directionCos + crossAxisSpeed * directionSin;
                 particle.speed.y = -mainAxisSpeed * directionSin + crossAxisSpeed * directionCos;
-                const crossAxisShift = (0.5 - random()) * 10;
+                const crossAxisShift = (0.5 - random()) * crossAxisSpread;
                 particle.x = x - spriteScaledSize / 2 + mainAxisShift * i * directionCos + crossAxisShift * directionSin;
                 particle.y = y - spriteScaledSize / 2 - mainAxisShift * i * directionSin + crossAxisShift * directionCos;
                 particle.time = 0;
@@ -626,7 +625,7 @@ export class Player extends GameObject {
         context.save();
 
         if (this.rocket) {
-            this.rocketParticles.add(this.position.x + this.width / 2, this.position.y + this.height / 2);
+            this.rocketParticles.add(this.position.x + this.width / 2, this.position.y + this.height / 2, 10, 10);
 
             if (this.speed.y >= 0) {
                 this.rocket = false;
@@ -819,7 +818,7 @@ class Comet extends InteractiveObject {
     private static particlesMaker = createParticlesMaker({
         lifeTime: 20,
         maxParticles: 250,
-        maxRadius: Comet.radius / 3,
+        maxRadius: Comet.radius / 3 | 0,
         direction: Comet.tailDirection,
         speed: 30,
         scale: 6,
@@ -827,7 +826,7 @@ class Comet extends InteractiveObject {
         colorOverTime: (progress: number) => {
             const hueShift = 255 * min(1, 1 - 2 * progress);
             const decay = between(0, 1, 1 - progress);
-            return { r: 255 * decay, g: hueShift * decay, b: 255, a: 0.05 * decay };
+            return { r: 255 * decay, g: hueShift * decay, b: 255, a: 0.1 * decay };
         },
     });
 
@@ -871,7 +870,7 @@ class Comet extends InteractiveObject {
     })();
 
     render(context: WrappedContext) {
-        this.particles.add(this.position.x + this.width / 2, this.position.y + this.height / 2);
+        this.particles.add(this.position.x + this.width / 2, this.position.y + this.height / 2, 2, 10);
         this.particles.render(context);
         context.drawImage(
             Comet.sprite,
