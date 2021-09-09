@@ -787,17 +787,15 @@ class Alert extends InteractiveObject {
     alpha: number = 0;
 
     render(context: WrappedContext) {
-        context.save();
-        context.resetTransform();
         const gradient = context.createLinearGradient(0, 0, 0, canvas.height * 0.2);
         context.globalAlpha = this.alpha;
-        gradient.addColorStop(0, 'rgba(255, 0, 0, 0.5)')
-        gradient.addColorStop(0.3, 'rgba(255, 0, 0, 0.2)')
+        gradient.addColorStop(0, 'rgba(255, 0, 0, 1.0)')
+        gradient.addColorStop(0.3, 'rgba(255, 0, 0, 0.4)')
         gradient.addColorStop(1, 'rgba(255, 0, 0, 0)')
         context.fillStyle = gradient;
         context.fillRect(0, 0, canvas.width, canvas.height * 0.2);
-        context.restore();
         this.visualAlert++;
+        context.globalAlpha = 1;
     }
 
     tick(state: GameState) {
@@ -1573,7 +1571,7 @@ class GameState {
             const comet = new Comet();
             const cometAlert = new Alert();
             comet.position.x = cometAlert.position.x = (0.3 + random() * 0.7) * WORLD_SIZE;
-            comet.position.y = cometAlert.position.y = this.nextComet - WORLD_SIZE / 2;
+            comet.position.y = cometAlert.position.y = this.nextComet - WORLD_SIZE;
             this.addObject(comet, 0);
             this.addObject(cometAlert, 2);
 
@@ -1634,6 +1632,17 @@ let fpsCounter: number = 0;
 
 const render = (state: GameState, context: WrappedContext) => {
     context.save();
+
+    /**
+     * The last layer is rendered separately, cause it is rendered before the clip/transforms.
+     */
+    {
+        const layer = state.objectLayers[state.objectLayers.length - 1];
+        for (let objectIndex = layer.length; objectIndex--;) {
+            layer[objectIndex].render(context);
+        }
+    }
+
     context.translate(0, canvas.height / 2);
     context.translate(0, -WORLD_SIZE * scene.scale / 2);
 
@@ -1648,7 +1657,7 @@ const render = (state: GameState, context: WrappedContext) => {
 
     context.translate(-state.screenArea.left, -state.screenArea.top);
 
-    for (let layerIndex = state.objectLayers.length; layerIndex--;) {
+    for (let layerIndex = state.objectLayers.length - 1; layerIndex--;) {
         const layer = state.objectLayers[layerIndex];
         for (let objectIndex = layer.length; objectIndex--;) {
             layer[objectIndex].render(context);
@@ -1744,13 +1753,13 @@ export const createGame = ({ rockets = false }) => {
             game.animate(currentTime);
 
             if (!game.state.over) {
-                window.requestAnimationFrame(game.loop);
+                requestAnimationFrame(game.loop);
             }
         },
 
         startLoop: () => {
             document.body.classList.add('playing');
-            window.requestAnimationFrame((currentTime: number) => {
+            requestAnimationFrame((currentTime: number) => {
                 state.previousTime = currentTime;
                 game.loop(currentTime);
             });

@@ -6,14 +6,14 @@ import { LocalStorage } from "./LocalStorage";
 
 const resize = () => {
     const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')
-    canvas.width = document.body.clientWidth * window.devicePixelRatio / graphicsQuality;
-    canvas.height = document.body.clientHeight * window.devicePixelRatio / graphicsQuality;
+    canvas.width = document.body.clientWidth * devicePixelRatio / graphicsQuality;
+    canvas.height = document.body.clientHeight * devicePixelRatio / graphicsQuality;
     const vMin = Math.min(document.body.clientWidth, document.body.clientHeight) / 100;
     document.documentElement.style.fontSize = `${vMin}px`;
 
     scene.scale = Math.min(canvas.width / WORLD_SIZE, canvas.height / WORLD_SIZE);
 };
-window.addEventListener('resize', resize);
+addEventListener('resize', resize);
 
 const isTouchDevice = () => {
     try {
@@ -141,7 +141,7 @@ export const activateMenu = () => {
         }
         previousTime = time;
         if (menuActive) {
-            window.requestAnimationFrame(renderBackground);
+            requestAnimationFrame(renderBackground);
         }
     };
 
@@ -151,7 +151,7 @@ export const activateMenu = () => {
     menu.style.display = null;
     activeScreen = menu;
     setActiveButton(document.querySelector('#start'));
-    window.requestAnimationFrame(renderBackground);
+    requestAnimationFrame(renderBackground);
 };
 
 const deactivateMenu = () => {
@@ -186,7 +186,7 @@ const setGraphicsQuality = (value: GraphicsQuality) => {
     resize();
 };
 
-export const waitNextFrame = () => new Promise(window.requestAnimationFrame);
+export const waitNextFrame = () => new Promise(requestAnimationFrame);
 const wait = (time: number) => new Promise(resolve => setTimeout(resolve, time));
 const waitRelayout = () => document.body.getClientRects() && waitNextFrame();
 
@@ -276,7 +276,7 @@ let logo: HTMLCanvasElement;
 const drawLogo = () => {
     logo = document.querySelector<HTMLCanvasElement>('#logo');
     const ratio = 0.4;
-    logo.width = Math.min(screen.width * window.devicePixelRatio, screen.height * window.devicePixelRatio) * 0.8;
+    logo.width = Math.min(screen.width * devicePixelRatio, screen.height * devicePixelRatio) * 0.8;
     logo.height = logo.width * ratio;
     const context = logo.getContext('2d');
     const scale = logo.width;
