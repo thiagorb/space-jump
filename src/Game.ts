@@ -1350,7 +1350,7 @@ class GameState {
             this.addObject(comet, 0);
             this.addObject(cometAlert, 2);
 
-            this.nextComet = this.nextComet - 10 * WORLD_SIZE;
+            this.nextComet = this.nextComet - (9 + 3 * random()) * WORLD_SIZE;
         }
 
         this.player.tick(this);
