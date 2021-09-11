@@ -86,22 +86,25 @@ const setActiveButton = (button: HTMLDivElement) => {
 
 document.addEventListener('keydown', (e: KeyboardEvent) => {
     const key = keyboardMap.get(e.code);
-    if (key === 'arrowDown' || key === 'arrowRight') {
-        const nextButton = getNextButton(1);
-        if (nextButton) {
-            setActiveButton(nextButton);
-        }
-    } else if (key === 'arrowLeft' || key === 'arrowUp') {
-        const nextButton = getNextButton(-1);
-        if (nextButton) {
-            setActiveButton(nextButton);
-        }
-    } else if (key === 'enter') {
-        const activeButton = getActiveButton();
-        if (activeButton) {
-            activeButton.click();
-        } else {
-            togglePause();
+
+    if (activeScreen) {
+        if (key === 'arrowDown' || key === 'arrowRight') {
+            const nextButton = getNextButton(1);
+            if (nextButton) {
+                setActiveButton(nextButton);
+            }
+        } else if (key === 'arrowLeft' || key === 'arrowUp') {
+            const nextButton = getNextButton(-1);
+            if (nextButton) {
+                setActiveButton(nextButton);
+            }
+        } else if (key === 'enter') {
+            const activeButton = getActiveButton();
+            if (activeButton) {
+                activeButton.click();
+            } else {
+                togglePause();
+            }
         }
     }
 
