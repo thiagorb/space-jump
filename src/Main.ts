@@ -98,13 +98,15 @@ document.addEventListener('keydown', (e: KeyboardEvent) => {
             if (nextButton) {
                 setActiveButton(nextButton);
             }
-        } else if (key === 'enter') {
-            const activeButton = getActiveButton();
-            if (activeButton) {
-                activeButton.click();
-            } else {
-                togglePause();
-            }
+        }
+    }
+
+    if (key === 'enter') {
+        const activeButton = getActiveButton();
+        if (activeButton) {
+            activeButton.click();
+        } else {
+            togglePause();
         }
     }
 
