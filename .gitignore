@@ -1,4 +1,5 @@
 node_modules/
+assembly/out/
 dist/
 build/
 build.tar.gz

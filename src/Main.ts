@@ -1,8 +1,10 @@
 import { soundPlayer } from "./Audio";
 import { getBackground } from "./Background";
-import { createGame, wrapContext as wrapContext, Player } from "./Game";
+import { createGame, Player } from "./Game";
 import { canvas, GraphicsQuality, keyboard, keyboardMap, random, scene, TAU, WORLD_SIZE } from "./Globals";
 import { LocalStorage } from "./LocalStorage";
+import { near } from "./Near";
+import { ranking } from "./Ranking";
 
 const resize = () => {
     const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')
@@ -42,7 +44,9 @@ const initializeMonetization = () => {
             }
         });
     } catch (error) {
-        console.error('Failed to initialize monetization', error);
+        if (process.env.NODE_ENV !== 'production') {
+            console.error('Failed to initialize monetization', error);
+        }
     }
 };
 initializeMonetization();
@@ -125,7 +129,7 @@ export const activateMenu = () => {
     let backgroundY = background.getHeight() * random();
     let previousTime = null;
     const renderBackground = (time: number) => {
-        const context = wrapContext(canvas.getContext('2d'));
+        const context = canvas.getContext('2d');
         background.draw(context, backgroundY, canvas.width, canvas.height);
 
         context.save();
@@ -145,6 +149,7 @@ export const activateMenu = () => {
         }
     };
 
+    updateRanking();
     enableCursor();
     menuActive = true;
     const menu = document.querySelector<HTMLDivElement>('#menu');
@@ -174,6 +179,13 @@ let graphicsQuality = GraphicsQuality.High;
 const updateGraphicsText = () => {
     document.querySelector('#graphics .setting').setAttribute('data-text', graphicsQualityText.get(graphicsQuality));
 }
+
+const updateSignText = async () => {
+    const isSignedIn = await near.blockingIsSignedIn();
+
+    document.querySelector('#sign').setAttribute('data-text', isSignedIn ? 'SIGN OUT' : 'SIGN IN');
+    document.querySelector('#sign .setting').setAttribute('data-text', near.getAccountId() || '');
+};
 
 const setAudioActive = (value: boolean) => {
     LocalStorage.update(storage => storage.audio = soundPlayer.enabled = value);
@@ -333,6 +345,27 @@ const disableCursor = () => {
     document.body.classList.remove('cursor');
 };
 
+const updateRanking = async () => {
+    await ranking.update();
+    const rankingEntries = ranking.getEntries();
+    if (rankingEntries.length === 0) {
+        return;
+    }
+
+    const rankingList = document.querySelector<HTMLDListElement>('#ranking dl');
+    let i = 1;
+    rankingList.innerHTML = '';
+    for (const e of rankingEntries) {
+        const dt = document.createElement('dt');
+        dt.innerText = `${i++}. ${e.player}`;
+        const dd = document.createElement('dd');
+        dd.innerText = e.score.toString();
+        rankingList.append(dt, dd);
+    }
+
+    document.querySelector<HTMLDivElement>('#ranking').style.display = 'block';
+};
+
 let activeScreen: HTMLDivElement = null;
 let activeGame: ReturnType<typeof createGame> = null;
 document.addEventListener('DOMContentLoaded', () => {
@@ -369,6 +402,15 @@ document.addEventListener('DOMContentLoaded', () => {
             document.exitFullscreen();
         } else {
             requestFullscreen();
+        }
+    });
+
+    document.querySelector('#sign').addEventListener('click', async () => {
+        if (near.isSignedIn()) {
+            near.signOut();
+            updateSignText();
+        } else {
+            near.requestSignIn();
         }
     });
 
@@ -416,7 +458,9 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             await requestFullscreen();
         } catch (error) {
-            console.error(error);
+            if (process.env.NODE_ENV !== 'production') {
+                console.error(error);
+            }
         }
     });
 
@@ -478,6 +522,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeCursor();
     enableCursor();
     setGraphicsQuality(LocalStorage.get().graphicsQuality);
+    updateSignText();
 
     goToFullscreen();
 });

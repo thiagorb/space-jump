@@ -1,9 +1,8 @@
-import { WrappedContext } from "./Game";
 import { random, TAU } from "./Globals";
 
 const randomIntBetween = (min: number, max: number): number => min + Math.floor((max - min) * random());
 
-export class Particle {
+class Particle {
     opacity = random() / 5;
     smokeSize = 5;
     points: Array<{x: number, y: number, size: number}> = [];
@@ -130,7 +129,7 @@ const drawDustCloud = ({steps, x, y, width, height, context}: {steps: number, x:
     context.restore();
 };
 
-export const createBackgroundPattern = () => {
+const createBackgroundPattern = () => {
     const patternSize = 1000; // Math.max(screen.width, screen.height);
     const patternScale = Math.max(screen.width, screen.height) / patternSize;
     const maxScreens = 10;
@@ -191,7 +190,7 @@ export const createBackgroundPattern = () => {
         increment,
         getHeight,
         canvas: patternCanvas,
-        draw: (context: WrappedContext, yOffset: number, width: number, height: number) => {
+        draw: (context: CanvasRenderingContext2D, yOffset: number, width: number, height: number) => {
             const relativeHeight = getHeight() * width / patternCanvas.width;
             for (let offset = (-10000 * relativeHeight + yOffset) % relativeHeight; offset < height; offset += relativeHeight) {
                 context.drawImage(patternCanvas, 0, 0, patternCanvas.width, getHeight(), 0, offset, width, relativeHeight);

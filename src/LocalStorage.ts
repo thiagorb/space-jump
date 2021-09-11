@@ -1,46 +1,62 @@
 import { GraphicsQuality } from "./Globals";
+import { RankingEntry } from "./Ranking";
 
 interface LocalStorageData {
-    highScore: number;
     audio: boolean;
     fullscreen: boolean;
-    graphicsQuality: GraphicsQuality
+    graphicsQuality: GraphicsQuality;
+    ranking: Array<RankingEntry>;
 }
 
-let backup: LocalStorageData = null;
+export const localStorageKey = 'thiagorb_space_jump';
+
+const validateStorage = (value: any): value is LocalStorageData => {
+    return (
+        value
+        && Array.isArray(value.ranking)
+        && !value.ranking.some((e: any) => !e || typeof e.player !== 'string' || typeof e.score !== 'number')
+        && typeof value.audio === 'boolean'
+        && typeof value.fullscreen === 'boolean'
+        && typeof value.graphicsQuality === 'number'
+    );
+};
 
 export const LocalStorage = {
-    get() {
+    get(): LocalStorageData {
+        let value: any;
         try {
-            const fromLocalStorage = localStorage && localStorage.getItem('thiagorb/space');
-            backup = JSON.parse(fromLocalStorage);
+            const fromLocalStorage = localStorage && localStorage.getItem(localStorageKey);
+            value = JSON.parse(fromLocalStorage);
         } catch (error) {
-            console.error('Failed to load data from local storage', error);
+            if (process.env.NODE_ENV !== 'production') {
+                console.error('Failed to load data from local storage', error);
+            }
         }
 
-        if (!backup || typeof backup.highScore !== 'number' || typeof backup.audio !== 'boolean' || typeof backup.fullscreen !== 'boolean' || typeof backup.graphicsQuality !== 'number') {
-            backup = {
-                highScore: 0,
+        if (!validateStorage(value)) {
+            return {
                 audio: true,
                 fullscreen: true,
                 graphicsQuality: GraphicsQuality.High,
+                ranking: [],
             };
         }
 
-        return backup;
+        return value;
     },
 
-    update<Return>(callback: (data: LocalStorageData) => Return) {
-        const result = callback(LocalStorage.get());
+    update<Return>(callback: (data: LocalStorageData) => void): void {
+        const result = LocalStorage.get();
+        callback(result);
 
         try {
             if (localStorage) {
-                localStorage.setItem('thiagorb/space', JSON.stringify(backup));
+                localStorage.setItem(localStorageKey, JSON.stringify(result));
             }
         } catch (error) {
-            console.error('Failed to store data to local storage', error);
+            if (process.env.NODE_ENV !== 'production') {
+                console.error('Failed to store data to local storage', error);
+            }
         }
-
-        return result;
     },
 };
