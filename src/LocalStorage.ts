@@ -33,7 +33,7 @@ export const LocalStorage = {
 
         if (!validateStorage(value)) {
             return {
-                audio: true,
+                audio: false,
                 graphicsQuality: GraphicsQuality.High,
                 ranking: [],
             };
