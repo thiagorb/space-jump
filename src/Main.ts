@@ -160,7 +160,6 @@ export const activateMenu = () => {
 };
 
 const deactivateMenu = () => {
-    disableCursor();
     menuActive = false;
     activeScreen = null;
 };
@@ -341,10 +340,6 @@ const enableCursor = () => {
     document.body.classList.add('cursor');
 };
 
-const disableCursor = () => {
-    document.body.classList.remove('cursor');
-};
-
 const updateRanking = async () => {
     await ranking.update();
     const rankingEntries = ranking.getEntries();
@@ -489,7 +484,6 @@ const unpause = async () => {
 
     activeScreen = null;
     pauseScreen.classList.remove('visible');
-    disableCursor();
     await wait(300);
     pauseScreen.style.zIndex = null;
     activeGame.unpause();
