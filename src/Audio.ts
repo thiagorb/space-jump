@@ -1,3 +1,4 @@
+let interacted = false;
 let enabled = false;
 
 const sounds = {
@@ -32,7 +33,7 @@ const throttle = (ms: number, sound: string) => {
     const clearPrevious = () => previous = null;
 
     return () => {
-        if (!enabled || previous) {
+        if (!enabled || !interacted || previous) {
             return;
         }
 
@@ -54,3 +55,14 @@ export const soundPlayer = {
     playClick: throttle(100, 'click'),
     playAlert: throttle(1000, 'alert'),
 };
+
+const setInteracted = () => {
+    interacted = true;
+    document.removeEventListener('click', setInteracted);
+    document.removeEventListener('keydown', setInteracted);
+    document.removeEventListener('keyup', setInteracted);
+};
+
+document.addEventListener('click', setInteracted);
+document.addEventListener('keydown', setInteracted);
+document.addEventListener('keyup', setInteracted);

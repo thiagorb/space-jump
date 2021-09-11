@@ -376,6 +376,9 @@ document.addEventListener('DOMContentLoaded', () => {
     resize();
 
     const goToMenu = () => {
+        const background = getBackground();
+        background.increment();
+        background.increment();
         activateMenu();
         updateAudioText();
         drawLogo();
@@ -388,7 +391,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             await body.requestFullscreen();
         }
-        LocalStorage.update(storage => storage.fullscreen = true);
     };
 
     document.querySelector('#audio').addEventListener('click', () => {
@@ -429,74 +431,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('#start').addEventListener('click', () => startGame());
     document.querySelector('#rockets').addEventListener('click', () => startGame({ rockets: true }));
 
-    const goToFullscreen = () => {
-        if (!LocalStorage.get().fullscreen || !document.fullscreenEnabled) {
-            if (!document.fullscreenEnabled) {
-                document.querySelector('#fullscreen').remove();
-            }
-            document.querySelector('#fullscreen-question').remove();
-            goToAudio();
-            return;
-        }
-
-        activeScreen = document.querySelector('#fullscreen-question');
-        setActiveButton(document.querySelector('#fullscreen--yes'));
-        fadeInTransition();
-    };
-
-    const goToAudio = () => {
-        if (!LocalStorage.get().audio) {
-            document.querySelector('#audio-question').remove();
-            goToMenu();
-        } else {
-            activeScreen = document.querySelector('#audio-question');
-            setActiveButton(document.querySelector('#audio--yes'));
-            fadeInTransition();
-        }
-    };
-
-    document.querySelector('#fullscreen--yes').addEventListener('click', async () => {
-        await closeFullScreen();
-        try {
-            await requestFullscreen();
-        } catch (error) {
-            if (process.env.NODE_ENV !== 'production') {
-                console.error(error);
-            }
-        }
-    });
-
-    const closeFullScreen = async () => {
-        activeScreen = null;
-        await fadeOutTransition();
-        getBackground().increment();
-        document.querySelector('#fullscreen-question').remove();
-        goToAudio();
-    }
-
-    const closeAudio = async () => {
-        activeScreen = null;
-        await fadeOutTransition();
-        getBackground().increment();
-        document.querySelector('#audio-question').remove();
-        goToMenu();
-    }
-
-    document.querySelector('#fullscreen--no').addEventListener('click', () => {
-        LocalStorage.update(storage => storage.fullscreen = false);
-        closeFullScreen();
-    });
-
-    document.querySelector('#audio--no').addEventListener('click', () => {
-        setAudioActive(false);
-        closeAudio();
-    });
-
-    document.querySelector('#audio--yes').addEventListener('click', () => {
-        setAudioActive(true);
-        closeAudio();
-    });
-
     document.body.addEventListener('mouseover', (event: MouseEvent) => {
         const element = <HTMLDivElement>event.target;
         if (element.matches('.button')) {
@@ -521,12 +455,16 @@ document.addEventListener('DOMContentLoaded', () => {
         activeGame = null;
     });
 
+    if (!document.fullscreenEnabled) {
+        document.querySelector('#fullscreen').remove();
+    }
+    setAudioActive(LocalStorage.get().audio);
     initializeCursor();
     enableCursor();
     setGraphicsQuality(LocalStorage.get().graphicsQuality);
     updateSignText();
 
-    goToFullscreen();
+    goToMenu();
 });
 
 const pause = () => {

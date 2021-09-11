@@ -3,7 +3,6 @@ import { RankingEntry } from "./Ranking";
 
 interface LocalStorageData {
     audio: boolean;
-    fullscreen: boolean;
     graphicsQuality: GraphicsQuality;
     ranking: Array<RankingEntry>;
 }
@@ -16,7 +15,6 @@ const validateStorage = (value: any): value is LocalStorageData => {
         && Array.isArray(value.ranking)
         && !value.ranking.some((e: any) => !e || typeof e.player !== 'string' || typeof e.score !== 'number')
         && typeof value.audio === 'boolean'
-        && typeof value.fullscreen === 'boolean'
         && typeof value.graphicsQuality === 'number'
     );
 };
@@ -36,7 +34,6 @@ export const LocalStorage = {
         if (!validateStorage(value)) {
             return {
                 audio: true,
-                fullscreen: true,
                 graphicsQuality: GraphicsQuality.High,
                 ranking: [],
             };
