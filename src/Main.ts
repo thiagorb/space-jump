@@ -186,7 +186,7 @@ const updateSignText = async () => {
     const isSignedIn = await near.blockingIsSignedIn();
 
     document.querySelector('#sign').setAttribute('data-text', isSignedIn ? 'SIGN OUT' : 'SIGN IN');
-    document.querySelector('#sign .setting').setAttribute('data-text', near.getAccountId() || '');
+    document.querySelector('#sign .setting').setAttribute('data-text', formatPlayerName(near.getAccountId() || ''));
 };
 
 const setAudioActive = (value: boolean) => {
@@ -343,6 +343,8 @@ const enableCursor = () => {
     document.body.classList.add('cursor');
 };
 
+const formatPlayerName = (name: string) => name.replace(/\.testnet$/, '');
+
 const updateRanking = async () => {
     await ranking.update();
     const rankingEntries = ranking.getEntries();
@@ -353,13 +355,13 @@ const updateRanking = async () => {
     const rankingList = document.querySelector<HTMLDListElement>('#ranking div');
     let i = 1;
     rankingList.innerHTML = '';
-    for (const e of rankingEntries) {
+    for (const entry of rankingEntries) {
         const position = document.createElement('div');
         position.innerText = `${i++}.`;
         const name = document.createElement('div');
-        name.innerText = e.player.replace(/\.testnet$/, '');
+        name.innerText = formatPlayerName(entry.player);
         const score = document.createElement('div');
-        score.innerText = e.score.toString();
+        score.innerText = entry.score.toString();
         rankingList.append(position, name, score);
     }
 
