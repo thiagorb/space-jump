@@ -352,15 +352,17 @@ const updateRanking = async () => {
         return;
     }
 
-    const rankingList = document.querySelector<HTMLDListElement>('#ranking dl');
+    const rankingList = document.querySelector<HTMLDListElement>('#ranking div');
     let i = 1;
     rankingList.innerHTML = '';
     for (const e of rankingEntries) {
-        const dt = document.createElement('dt');
-        dt.innerText = `${i++}. ${e.player}`;
-        const dd = document.createElement('dd');
-        dd.innerText = e.score.toString();
-        rankingList.append(dt, dd);
+        const position = document.createElement('div');
+        position.innerText = `${i++}.`;
+        const name = document.createElement('div');
+        name.innerText = e.player;
+        const score = document.createElement('div');
+        score.innerText = e.score.toString();
+        rankingList.append(position, name, score);
     }
 
     document.querySelector<HTMLDivElement>('#ranking').style.display = 'block';

@@ -191,20 +191,20 @@
                 font-family: monospace;
             }
 
-            #ranking > dl {
+            #ranking > div {
                 display: grid;
-                column-gap: 2rem;
+                column-gap: 1rem;
                 margin: 0;
-                grid-template-columns: auto auto;
+                grid-template-columns: auto auto auto;
             }
 
-            #ranking dt {
+            #ranking > div :nth-child(3n + 2) {
                 white-space: nowrap;
                 text-overflow: ellipsis;
+                margin-right: 2rem;
             }
 
-            #ranking dd {
-                margin: 0;
+            #ranking > div :nth-child(3n + 1), #ranking > div :nth-child(3n + 3) {
                 text-align: right;
             }
 
@@ -284,8 +284,8 @@
             <div id="sign" class="button outline-text" data-text="SIGN IN"><div class="setting outline-text"></div></div>
             <div id="ranking">
                 <h3>RANKING</h3>
-                <dl>
-                </dl>
+                <div>
+                </div>
             </div>
         </div>
 

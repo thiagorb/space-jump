@@ -20,7 +20,8 @@ export const ranking = {
 
     getEntries: () => nearRanking.concat(LocalStorage.get().ranking)
         .sort((a, b) => b.score - a.score)
-        .slice(0, 10),
+        .slice(0, 10)
+        .map(e => ({ ...e, player: e.player.replace(/\.testnet$/, '') })),
 
     addEntry: (score: number) => {
         if (near.isSignedIn()) {
