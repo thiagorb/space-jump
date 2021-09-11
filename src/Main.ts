@@ -359,7 +359,7 @@ const updateRanking = async () => {
         const position = document.createElement('div');
         position.innerText = `${i++}.`;
         const name = document.createElement('div');
-        name.innerText = e.player;
+        name.innerText = e.player.replace(/\.testnet$/, '');
         const score = document.createElement('div');
         score.innerText = e.score.toString();
         rankingList.append(position, name, score);

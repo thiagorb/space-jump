@@ -14,7 +14,7 @@ let walletConnection: null | {
 };
 let contract: null | {
     get_ranking(): Promise<Array<RankingEntry>>;
-    add_ranking_entry({ score: number }): Promise<void>;
+    add_ranking_entry({ uuid: BigInt, score: number }): Promise<void>;
 };
 
 const init = (async () => {
@@ -32,15 +32,27 @@ const init = (async () => {
         return;
     }
 
-    contract = await new nearApi.Contract(
-        walletConnection.account(),
-        contractName,
-        {
-            viewMethods: ['get_ranking'],
-            changeMethods: ['add_ranking_entry'],
-            sender: walletConnection.getAccountId(),
-        }
-    );
+    if (process.env.NODE_ENV !== 'production') {
+        (<any>window).contract = contract = await new nearApi.Contract(
+            walletConnection.account(),
+            contractName,
+            {
+                viewMethods: ['get_ranking'],
+                changeMethods: ['add_ranking_entry', 'reset_ranking'],
+                sender: walletConnection.getAccountId(),
+            }
+        );
+    } else {
+        contract = await new nearApi.Contract(
+            walletConnection.account(),
+            contractName,
+            {
+                viewMethods: ['get_ranking'],
+                changeMethods: ['add_ranking_entry'],
+                sender: walletConnection.getAccountId(),
+            }
+        );
+    }
 })();
 
 export const near = {
@@ -53,9 +65,14 @@ export const near = {
         return walletConnection?.isSignedIn();
     },
 
-    getRanking: () => contract?.get_ranking(),
+    getRanking: async () => (await contract?.get_ranking())?.map(entry => ({
+        ...entry,
+        uuid: `0x${BigInt(entry.uuid).toString(16)}`,
+    })),
 
-    addRankingEntry: (score: number) => contract?.add_ranking_entry({ score }),
+    addRankingEntry: (uuid: string, score: number) => {
+        contract?.add_ranking_entry({ uuid: uuid.toString(), score })
+    },
 
     requestSignIn: async () => {
         await init;

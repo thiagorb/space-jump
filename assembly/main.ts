@@ -1,24 +1,33 @@
+import { u128 } from 'near-sdk-core';
 import { RankingEntry, ranking } from './model';
 
 const RANKING_SIZE = 10;
 
-export function add_ranking_entry(score: u32): void {
-    if (ranking.length < RANKING_SIZE) {
-        ranking.pushBack(RankingEntry.empty());
-    }
-
+export function add_ranking_entry(uuid: u128, score: u32): void {
     let minIndex = 0;
     for (let i = 1; i < ranking.length; i++) {
+        if (ranking[i].score >= score) {
+            return;
+        }
+
         if (ranking[i].score < ranking[minIndex].score) {
             minIndex = i;
+
         }
     }
 
-    if (ranking[minIndex].score >= score) {
-        return;
+    const newEntry = new RankingEntry(uuid, score);
+    if (ranking.length < RANKING_SIZE) {
+        ranking.pushBack(newEntry);
+    } else {
+        ranking.replace(minIndex, newEntry);
     }
+}
 
-    ranking.replace(minIndex, new RankingEntry(score));
+export function reset_ranking(): void {
+    while (ranking.length > 0) {
+        ranking.popBack();
+    }
 }
 
 export function get_ranking(): RankingEntry[] {

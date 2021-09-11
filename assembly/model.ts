@@ -1,18 +1,11 @@
-import { context, PersistentVector } from "near-sdk-as";
+import { context, PersistentVector, u128 } from "near-sdk-as";
 
 @nearBindgen
 export class RankingEntry {
     player: string;
 
-    constructor(public score: u32) {
-       this.player = context.sender;
-    }
-
-    public static empty(): RankingEntry
-    {
-        const entry = new RankingEntry(0);
-        entry.player = '<empty>';
-        return entry;
+    constructor(public uuid: u128, public score: u32) {
+        this.player = context.sender;
     }
 }
 
