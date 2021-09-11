@@ -4,7 +4,9 @@
   "description": "",
   "scripts": {
     "serve": "webpack-dev-server",
-    "build": "./build.sh"
+    "clean": "rm -rf ./dist",
+    "build": "NODE_ENV=production webpack --mode production",
+    "zip": "npm run clean && npm run build && (cd dist; zip -9 -X ../build.zip *) && node build/optimize.js"
   },
   "author": "Thiago Romão Barcala",
   "license": "ISC",
@@ -17,6 +19,7 @@
     "ts-loader": "*",
     "typescript": "*",
     "webpack-dev-server": "^4.0.0",
-    "zzfx": "^1.1.8"
+    "zzfx": "^1.1.8",
+    "ect-bin": "^1.4.1"
   }
 }
