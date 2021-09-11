@@ -1367,7 +1367,11 @@ class GameState {
         }
 
         if (this.screenArea.top > this.player.top) {
-            this.screenArea.position.y = this.player.top;
+            this.screenArea.position.y = this.player.top + this.player.speed.y;
+            this.screenArea.speedBoost = min(
+                this.screenArea.speedBoost,
+                -1.3 * JUMP_SPEED - this.screenArea.speed
+            );
         }
 
         this.screenArea.position.y += this.screenArea.speed + this.screenArea.speedBoost;
@@ -1473,7 +1477,7 @@ export const createGame = ({ rockets = false }) => {
     const state = new GameState();
     state.backgroundY = background.getHeight() * random();
     state.player.position.x = (WORLD_SIZE - state.player.width) / 2;
-    state.player.position.y = 10;
+    state.player.position.y = 50;
     state.levelConfig = rockets ? GameState.rocketsMode() : GameState.normalMode();
 
     {
